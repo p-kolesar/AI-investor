@@ -335,3 +335,53 @@ Nahrať na SharePoint pred sessionou:
 - **Cold start:** Consumption plan má ~2-3s cold start — OK pre demo
 - **US sviatky:** daily-agent.yml obsahuje holiday check pred spustením
 - **Init:** pred prvým agent runom zavolať `GET /setup`
+
+-----
+
+## Fáza 7 — Fine-tuning P&L výkonnosti autonómneho agenta
+
+Iteratívne vylepšenia, ktoré zlepšujú výnos/riziko portfólia bez narušenia
+nákladového rozpočtu (`$5` kumulatívny cap, Finnhub 200 calls/deň). Zoznam je
+otvorený — nižšie je prvá konkrétna položka, ostatné sa **dodefinujú**.
+
+### 7.1 — Intraday monitoring otvorených pozícií (Level 0)
+
+**Problém:** denný loop rieši *deliberáciu* (sken watchlistu, nové pozície,
+revízia stratégie) — to stačí raz denne. Ale *risk-monitoring otvorených
+pozícií* na dennej frekvencii je príliš pomalý: stop-loss alebo news shock môže
+prísť kedykoľvek počas dňa.
+
+**Riešenie:** pridať tretiu, ľahšiu vrstvu *pod* existujúci Level 1/2 loop:
+
+|Tier                       |Frekvencia               |Rozsah          |LLM?             |Cost |
+|---------------------------|-------------------------|----------------|-----------------|-----|
+|**L0 — Guardrail monitor** |každých 30–60 min (RTH)  |len otvorené poz.|len pri triggeri |~$0  |
+|L1 — Screening             |denne                    |celý watchlist  |1 volanie        |lacné|
+|L2 — Deep dive             |denne                    |2–3 symboly     |tool use         |hlavný|
+
+- **Deterministické pravidlá** (bez LLM): stop-loss (napr. −8% od avg cost),
+  take-profit / trailing stop, jednorazový pohyb > X% od poslednej kontroly,
+  earnings do 2 prac. dní → trim na 5%. Stopky musia fungovať aj keď je spend
+  cap vyčerpaný.
+- **Eskalácia na Claude** len pri nuansovanom triggeri (napr. prepad na
+  správach → cut/hold), a to s kontextom **jedinej** pozície (~1–2k tokenov),
+  nie celého watchlistu.
+- **Implementácia:** nový `POST /agent/monitor` (`monitor_positions()`
+  recykluje `FinnhubClient` + `apply_trade`); druhý GitHub Actions cron
+  (`*/30 13-20 * * 1-5` UTC) alebo Azure Functions Timer trigger; stĺpec `type`
+  (`daily`/`monitor`) v `agent_log` na odlíšenie v Agent Log tabe.
+
+**Constraints (špecifické pre tento stack):**
+
+- Cache TTL = 15 min → **15 min je efektívne minimum** frekvencie; sweet spot
+  30–60 min (real-time websockety sú paid tier).
+- Finnhub 200 calls/deň: ~10 pozícií × 13 okien (½h) ≈ 130 + denný run ≈ 30 →
+  tesné; **hodinový** monitoring (≈70) je bezpečnejší, alebo zvýšiť cap.
+- GitHub Actions cron je best-effort (oneskorenie 5–15 min) — pre paper trading
+  OK; pre presné ticky je lepší Azure Timer trigger.
+
+### 7.2 — Ďalšie položky (bude definované)
+
+- *(TBD)* — tuning parametrov stop-loss / position sizing na základe 2-týždňovej histórie
+- *(TBD)* — …
+- *(TBD)* — …
