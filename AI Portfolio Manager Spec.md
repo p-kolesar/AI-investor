@@ -68,7 +68,7 @@ ai-portfolio-manager/
 |`/trade`          |POST  |Zaznamenať trade                                             |
 |`/trades`         |GET   |História tradov                                              |
 |`/prices/{symbol}`|GET   |Live quote (cez cache)                                       |
-|`/admin/init`     |POST  |Inicializácia — vytvorí Parquet súbory, $100K cash, watchlist|
+|`/setup`          |GET   |Inicializácia — vytvorí Parquet súbory, $100K cash, watchlist|
 
 -----
 
@@ -329,4 +329,4 @@ Nahrať na SharePoint pred sessionou:
 - **Auth:** frontend je verejná URL, žiadna autentifikácia
 - **Cold start:** Consumption plan má ~2-3s cold start — OK pre demo
 - **US sviatky:** daily-agent.yml obsahuje holiday check pred spustením
-- **Init:** pred prvým agent runom zavolať `POST /admin/init`
+- **Init:** pred prvým agent runom zavolať `GET /setup`
