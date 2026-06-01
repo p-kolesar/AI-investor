@@ -26,6 +26,7 @@ var hostingPlanName = 'plan-${baseName}-${environmentName}'
 var appInsightsName = 'appi-${baseName}-${environmentName}'
 var logAnalyticsName = 'log-${baseName}-${environmentName}'
 var deploymentContainerName = 'deploymentpackage'
+var dataContainerName = 'papertrading'
 var deploymentStorageConnSettingName = 'DEPLOYMENT_STORAGE_CONNECTION_STRING'
 
 // ---- Storage ----------------------------------------------------------------
@@ -51,6 +52,16 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01'
 resource deploymentContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
   parent: blobService
   name: deploymentContainerName
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
+// Application data container (Parquet files: portfolio, trades, cache, …).
+// Also created at runtime by the backend, but declared here so infra owns it.
+resource dataContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobService
+  name: dataContainerName
   properties: {
     publicAccess: 'None'
   }
