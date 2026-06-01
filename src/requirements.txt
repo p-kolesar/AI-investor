@@ -1,0 +1,2 @@
+# Azure Functions Python worker. Add app dependencies below as the demo grows.
+azure-functions
