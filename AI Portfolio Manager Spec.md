@@ -64,6 +64,7 @@ ai-portfolio-manager/
 |Endpoint          |Metóda|Popis                                                        |
 |------------------|------|-------------------------------------------------------------|
 |`/agent/run`      |POST  |Manuálny trigger agent run                                   |
+|`/agent/log`      |GET   |Posledné agent runy (memo, tokeny, cost) + kumulatívny spend |
 |`/portfolio`      |GET   |Aktuálne pozície + cash                                      |
 |`/trade`          |POST  |Zaznamenať trade                                             |
 |`/trades`         |GET   |História tradov                                              |
