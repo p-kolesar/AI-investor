@@ -8,11 +8,11 @@ pipelines — one for infrastructure (Bicep), one for application code.
 ```
 .github/workflows/
   infra.yml     # provisions/updates Azure infra (runs on infra/** changes + manual)
-  deploy.yml    # builds + deploys the Python function code (runs on src/** changes + manual)
+  deploy.yml    # builds + deploys the Python function code (runs on backend/** changes + manual)
 infra/
   main.bicep            # Storage, Log Analytics + App Insights, Flex Consumption plan, Function App
   main.parameters.json  # baseName / environmentName / pythonVersion
-src/
+backend/
   function_app.py       # Python v2 model — GET /api/health
   host.json
   requirements.txt
@@ -61,7 +61,7 @@ After that, merges to `main` trigger each pipeline automatically based on change
 ## Local development
 
 ```bash
-cd src
+cd backend
 python -m venv .venv && . .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 func start    # requires Azure Functions Core Tools v4
