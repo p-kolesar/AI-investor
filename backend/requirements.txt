@@ -1,2 +1,7 @@
-# Azure Functions Python worker. Add app dependencies below as the demo grows.
+# Azure Functions + AI/data stack
 azure-functions
+azure-storage-blob
+polars
+pyarrow
+requests
+anthropic
