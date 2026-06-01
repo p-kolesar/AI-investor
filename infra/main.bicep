@@ -33,6 +33,7 @@ var functionAppName = 'func-${baseName}-${environmentName}-${uniqueSuffix}'
 var hostingPlanName = 'plan-${baseName}-${environmentName}'
 var appInsightsName = 'appi-${baseName}-${environmentName}'
 var logAnalyticsName = 'log-${baseName}-${environmentName}'
+var staticSiteProdName = 'stapp-${baseName}-${environmentName}-prod-${uniqueSuffix}'
 var deploymentContainerName = 'deploymentpackage'
 var dataContainerName = 'papertrading'
 var deploymentStorageConnSettingName = 'DEPLOYMENT_STORAGE_CONNECTION_STRING'
@@ -167,7 +168,34 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
           value: claudeApiKey
         }
       ]
+      // The Static Web App calls this API cross-origin (build-time
+      // VITE_API_BASE = https://<func-host>/api). Allow its generated hostname;
+      // Bicep resolves the dependency so the SWA is created first.
+      cors: {
+        allowedOrigins: [
+          'https://${staticSiteProd.properties.defaultHostname}'
+        ]
+      }
     }
+  }
+}
+
+// ---- Static Web App (Free) --------------------------------------------------
+// Public, no-auth SPA (prod) for the workshop. Deployed via the SWA GitHub
+// Action with a deployment token (provider: None = no SWA-managed repo
+// integration). Free tier keeps this within the demo's cost budget.
+// NOTE: Static Web Apps are only offered in a subset of regions
+// (e.g. westeurope, eastus2, westus2, centralus, eastasia).
+// A second SWA for frontend-beta will be added alongside Phase 4.
+resource staticSiteProd 'Microsoft.Web/staticSites@2024-04-01' = {
+  name: staticSiteProdName
+  location: location
+  sku: {
+    name: 'Free'
+    tier: 'Free'
+  }
+  properties: {
+    provider: 'None'
   }
 }
 
@@ -176,3 +204,5 @@ output functionAppName string = functionApp.name
 output functionAppDefaultHostname string = functionApp.properties.defaultHostName
 output storageAccountName string = storageAccount.name
 output resourceGroupName string = resourceGroup().name
+output staticWebAppProdName string = staticSiteProd.name
+output staticWebAppProdHostname string = staticSiteProd.properties.defaultHostname
