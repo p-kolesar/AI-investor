@@ -135,15 +135,12 @@ Level 1 — Screening (max_tokens: 1024)
   → Claude v jednom volaní zoradí, vyberie 2-3 do deep dive + upraví watchlist
   → ~1,500-2,500 input tokenov
 
-Level 2 — Deep dive (max_tokens: 2048)
+Level 2 — Deep dive (max_tokens: 4096)
   → fundamentals + news + insider sentiment + earnings calendar
-  → finálne rozhodnutie + investment memo
-  → ~4,000 input tokenov
+  → kompaktný trades JSON (najprv) + investment memo (voľný text, potom)
+  → ~3,500-7,000 tokenov
 
-Tool calls (max_tokens: 256)
-  → štruktúrované dáta, nie text
-
-Daily budget cap: 8,000 tokenov → ak presiahne, run sa zablokuje + email
+Daily budget cap: 15,000 tokenov (screening-runaway guard; reálny strop je $5)
 Kumulatívny spend cap: ekvivalent $5 → agent sa vypne
 ```
 
@@ -163,8 +160,8 @@ Agent počas behu pridáva/odoberá symboly (validované cez Finnhub quote).
 
 ### Claude API
 
-- Per-call max_tokens: Screening 1024 / Deep dive 2048
-- Daily token budget cap: 8,000 tokenov → blok + email
+- Per-call max_tokens: Screening 1024 / Deep dive 4096
+- Daily token budget cap: 15,000 tokenov (guard; reálny strop je kumulatívny $5)
 - Kumulatívny cap: $5 ekvivalent → agent vypnutý
 - Anthropic Console: manuálne spending limit $10
 

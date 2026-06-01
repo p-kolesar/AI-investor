@@ -60,8 +60,13 @@ def deepdive_user_prompt(symbols: list[str], portfolio: dict, cash: float) -> st
         f"Voľný cash: ${cash:.2f}\n"
         "Vyžiadaj si fundamentals, news, insider sentiment, price target a earnings dátum "
         "(nástroje môžeš volať naraz). Dodrž SIZING a EARNINGS RISK pravidlá z mandátu. "
-        "Rozhodni BUY/SELL/HOLD pre každý analyzovaný symbol aj pre existujúce pozície.\n"
-        'Odpovedz IBA JSON: {"memo": "investment memo so zdôvodnením vrátane zvažovaných '
-        'alternatív", "trades": [{"symbol": "SYM", "side": "BUY|SELL", "shares": N, '
-        '"reasoning": "signály a prečo"}]}. Ak nič neobchoduješ, trades je prázdny zoznam.'
+        "Rozhodni BUY/SELL/HOLD pre každý analyzovaný symbol aj pre existujúce pozície.\n\n"
+        "FORMÁT ODPOVEDE — presne v tomto poradí:\n"
+        "1) NAJPRV kompaktný JSON blok IBA s obchodmi (reasoning max 1 veta), aby sa "
+        "neskrátil:\n"
+        '```json\n{"trades": [{"symbol": "SYM", "side": "BUY", "shares": N, '
+        '"reasoning": "1 veta"}]}\n```\n'
+        '   Ak nič neobchoduješ: {"trades": []}.\n'
+        "2) POTOM napíš investment memo ako voľný text: zvolená/revidovaná stratégia, "
+        "kľúčové signály, zvažované alternatívy a prečo si ich zamietol."
     )

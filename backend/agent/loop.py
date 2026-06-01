@@ -25,8 +25,10 @@ from agent.tools import DEEPDIVE_TOOLS, run_tool
 CONTAINER = "papertrading"
 MODEL = "claude-sonnet-4-6"
 SCREENING_MAX_TOKENS = 1024
-DEEPDIVE_MAX_TOKENS = 2048
-DAILY_TOKEN_CAP = 8000
+DEEPDIVE_MAX_TOKENS = 4096
+# Screening-runaway guard (blocks the deep dive if screening alone exceeds it).
+# Sized for the full-watchlist scan; the real cost backstop is SPEND_CAP_USD.
+DAILY_TOKEN_CAP = 15000
 SPEND_CAP_USD = 5.0
 INPUT_COST_PER_1M = 3.00
 OUTPUT_COST_PER_1M = 15.00
@@ -62,6 +64,11 @@ def _extract_json(text: str):
         return json.loads(candidate)
     except json.JSONDecodeError:
         return None
+
+
+def _memo_after_json(text: str) -> str:
+    """Strip the leading ```json {...}``` trades block; return the prose memo that follows."""
+    return re.sub(r"```(?:json)?\s*\{.*?\}\s*```", "", text, count=1, flags=re.DOTALL).strip()
 
 
 def _watchlist() -> list[str]:
@@ -229,11 +236,12 @@ def run_agent() -> dict:
         client, fc, MANDATE, deepdive_user_prompt(selected, positions, cash), DEEPDIVE_TOOLS, DEEPDIVE_MAX_TOKENS
     )
     decision = _extract_json(dive_text) or {}
-    memo = decision.get("memo", dive_text or "(no memo produced)")
+    trades = decision.get("trades", [])
+    memo = _memo_after_json(dive_text) or dive_text or "(no memo produced)"
 
     # Execute trades deterministically; price comes from a live quote, not the model.
     executed, skipped = [], []
-    for t in decision.get("trades", []):
+    for t in trades:
         try:
             price = fc.get_quote(str(t.get("symbol", "")).upper()).get("price")
             result = apply_trade(t.get("symbol"), t.get("shares"), price, t.get("side"))
