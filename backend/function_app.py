@@ -170,6 +170,33 @@ def get_trades(req: func.HttpRequest) -> func.HttpResponse:
         return func.HttpResponse(json.dumps({"error": str(e)}), status_code=500, mimetype="application/json")
 
 
+# ---- Agent log ----
+
+
+@app.route(route="agent/log", methods=["GET"])
+def get_agent_log(req: func.HttpRequest) -> func.HttpResponse:
+    """Recent agent runs (date, tokens, cost, memo) + cumulative spend. ?limit=N (default 10)."""
+    try:
+        try:
+            limit = max(1, int(req.params.get("limit", "10")))
+        except ValueError:
+            limit = 10
+        log = read_parquet(CONTAINER, "agent_log.parquet")
+        cumulative = float(log["estimated_cost_usd"].sum()) if len(log) > 0 else 0.0
+        recent = log.tail(limit).reverse().to_dicts() if len(log) > 0 else []
+        return func.HttpResponse(
+            json.dumps(
+                {"runs": recent, "total_runs": len(log), "cumulative_cost_usd": round(cumulative, 4)},
+                default=str,
+            ),
+            mimetype="application/json",
+            status_code=200,
+        )
+    except Exception as e:
+        logging.error(f"Agent log fetch failed: {e}")
+        return func.HttpResponse(json.dumps({"error": str(e)}), status_code=500, mimetype="application/json")
+
+
 # ---- Watchlist ----
 
 

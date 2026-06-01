@@ -54,12 +54,28 @@ jobs:
       - name: Trigger agent run
         if: steps.holiday.outputs.skip == 'false'
         run: |
-          url="https://${{ steps.discover.outputs.host }}/api/agent/run"
-          echo "POST $url"
-          code=$(curl -s -X POST -o /tmp/body -w "%{http_code}" --max-time 300 "$url" || true)
+          base="https://${{ steps.discover.outputs.host }}/api"
+          echo "POST $base/agent/run"
+          code=$(curl -s -X POST -o /tmp/body -w "%{http_code}" --max-time 300 "$base/agent/run" || true)
           echo "HTTP $code"
           cat /tmp/body || true
           echo ""
+
+          # Pull the latest log entry (memo + tokens + cost) and publish it to the
+          # job log + the run's Summary page (no email needed).
+          curl -s --max-time 60 "$base/agent/log?limit=1" -o /tmp/log.json || true
+          echo "----- latest agent log -----"
+          jq '.runs[0] // {}' /tmp/log.json || cat /tmp/log.json
+          {
+            echo "## Agent run — $(date -u +%Y-%m-%d)"
+            echo ""
+            echo "Cumulative spend: \$$(jq -r '.cumulative_cost_usd // 0' /tmp/log.json) over $(jq -r '.total_runs // 0' /tmp/log.json) runs"
+            echo ""
+            echo '```json'
+            jq '.runs[0] // {}' /tmp/log.json 2>/dev/null || cat /tmp/log.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
           if [ "$code" != "200" ]; then
             echo "::error::Agent run failed (HTTP $code)"
             exit 1
