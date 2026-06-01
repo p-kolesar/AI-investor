@@ -27,6 +27,7 @@ Edukačný projekt ako živá demonštrácia GenAI pre hands-on workshop v capit
 ai-portfolio-manager/
 ├── backend/
 │   ├── function_app.py
+│   ├── trading.py
 │   ├── agent/
 │   │   ├── loop.py
 │   │   ├── tools.py
@@ -35,26 +36,29 @@ ai-portfolio-manager/
 │   │   └── finnhub.py
 │   ├── storage/
 │   │   └── blobs.py
+│   ├── host.json
 │   ├── requirements.txt
 │   └── local.settings.json.example
-├── frontend-prod/
+├── infra/
+│   ├── main.bicep                 # Function App (+CORS) + Static Web App (prod, Free)
+│   └── main.parameters.json
+├── frontend-prod/                 # React + Vite, dark mode
 │   ├── src/
 │   │   ├── App.jsx
-│   │   └── views/
+│   │   ├── api.js                 # jediný backend seam (+ stub dáta bez API)
+│   │   ├── views/                 # Dashboard, Positions, AgentLog, Performance
+│   │   └── components/
 │   ├── package.json
+│   ├── vite.config.js
 │   └── staticwebapp.config.json
-├── frontend-beta/
-│   ├── src/
-│   │   ├── App.jsx
-│   │   └── views/
-│   ├── package.json
-│   └── staticwebapp.config.json
+├── frontend-beta/                 # PLÁNOVANÉ — kópia prod + 2 bugy − Performance
 └── .github/
     └── workflows/
-        ├── deploy-backend.yml
+        ├── infra.yml              # Bicep infra
+        ├── deploy.yml             # backend Function code
         ├── deploy-frontend-prod.yml
-        ├── deploy-frontend-beta.yml
-        └── daily-agent.yml
+        ├── daily-agent.yml
+        └── deploy-frontend-beta.yml   # PLÁNOVANÉ (s frontend-beta)
 ```
 
 -----
@@ -192,14 +196,15 @@ cost = (input_tokens * 3.00 + output_tokens * 15.00) / 1_000_000
 
 -----
 
-## GitHub Actions — 4 workflows
+## GitHub Actions — workflows
 
-|Workflow                  |Trigger                                                      |
-|--------------------------|-------------------------------------------------------------|
-|`deploy-backend.yml`      |Push to main → Function App                                  |
-|`deploy-frontend-prod.yml`|Push to main → Static Web Apps prod                          |
-|`deploy-frontend-beta.yml`|Push to main → Static Web Apps beta                          |
-|`daily-agent.yml`         |Cron 08:30 UTC Mon-Fri + US holiday check + email pri failure|
+|Workflow                  |Trigger                                                      |Stav|
+|--------------------------|-------------------------------------------------------------|----|
+|`infra.yml`               |Push to main (`infra/**`) + manual → Bicep infra             |✅|
+|`deploy.yml`              |Push to main (`backend/**`) + manual → Function App          |✅|
+|`deploy-frontend-prod.yml`|Push to main (`frontend-prod/**`) + manual → Static Web App  |✅|
+|`daily-agent.yml`         |Cron 08:30 UTC Mon-Fri + US holiday check + email pri failure|✅|
+|`deploy-frontend-beta.yml`|Push to main (`frontend-beta/**`) → Static Web Apps beta     |⏳ plánované|
 
 -----
 
@@ -315,6 +320,29 @@ Nahrať na SharePoint pred sessionou:
 |Unrealized P&L |Zisk/strata na stále otvorených pozíciách                 |
 |Holding period |Ako dlho Claude držal danú pozíciu                        |
 |Outperformance |Portfólio rastie rýchlejšie ako benchmark (SPY)           |
+
+-----
+
+## Implementačný stav (k 2026-06-01)
+
+|Komponent                                   |Stav|
+|--------------------------------------------|----|
+|Backend (agent, endpointy, storage, trading)|✅ hotové|
+|Infra (Function App + prod SWA + CORS)       |✅ hotové|
+|`frontend-prod` (4-tab dashboard)            |✅ hotové a nasadené|
+|Daily agent workflow                         |✅ funkčné|
+|`frontend-beta` (workshop bug-hunt kópia)    |⏳ plánované|
+|Dashboard grafy na reálnych dátach           |⏳ demo dáta, kým nepribudne `/history` endpoint|
+
+Poznámky k stavu:
+- **Frontend:** React + Vite (dark mode). Beží aj bez backendu na stub dátach;
+  `VITE_API_BASE` ho prepne na živé API. Hosting: **Free Static Web App + CORS**
+  (nie linked-backend — kvôli nákladovému stropu).
+- **Grafy:** portfolio-vs-SPY line + daily P&L bar bežia na demo časovej rade.
+  Backend zatiaľ neslúži dennú časovú radu (`benchmark.parquet` je stub, žiadny
+  `/history` endpoint). Sharpe / max drawdown na Performance tabe sú z rovnakého
+  dôvodu stubnuté. Po pridaní `/history` sa mení len `api.js` `getHistory()`, UI
+  ostáva. Súvisí s **Fázou 7** (fine-tuning) a budúcim backend endpointom.
 
 -----
 
