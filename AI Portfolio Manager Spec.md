@@ -11,7 +11,7 @@ Edukačný projekt ako živá demonštrácia GenAI pre hands-on workshop v capit
 |Vrstva       |Technológia                                           |
 |-------------|------------------------------------------------------|
 |Backend      |Python Flex Function App (Consumption)                |
-|AI Agent     |Claude API — claude-sonnet-4-20250514                 |
+|AI Agent     |Claude API — claude-sonnet-4-6                        |
 |Market Data  |Finnhub (primary)                                     |
 |Storage      |Polars + Parquet → Azure Blob Storage                 |
 |Secrets      |Azure Key Vault (manuálne zadané)                     |
@@ -67,6 +67,7 @@ ai-portfolio-manager/
 |`/portfolio`      |GET   |Aktuálne pozície + cash                                      |
 |`/trade`          |POST  |Zaznamenať trade                                             |
 |`/trades`         |GET   |História tradov                                              |
+|`/watchlist`      |GET   |Aktuálny (agentom spravovaný) watchlist                      |
 |`/prices/{symbol}`|GET   |Live quote (cez cache)                                       |
 |`/setup`          |GET   |Inicializácia — vytvorí Parquet súbory, $100K cash, watchlist|
 
@@ -105,17 +106,19 @@ papertrading/
 Si autonómny portfolio manažér spravujúci paper trading portfólio
 s počiatočným kapitálom $100,000.
 
-UNIVERSUM: US equities + ETFs z watchlistu 10 symbolov.
+UNIVERZUM: US equities + ETFs. Agent si spravuje vlastný watchlist (max 30).
 POZÍCIE: Min 5, max 10 otvorených pozícií.
 SIZING: Max 15% portfólia v jednej pozícii. Min 10% cash rezerva vždy.
+WATCHLIST: Agent môže pridať/odobrať symboly s odôvodnením (nie tie s otvorenou
+  pozíciou); validuje sa cez Finnhub quote. Nové symboly sa skenujú nasledujúci deň.
 STRATÉGIA: Prvý deň si sám zvolíš investičnú stratégiu a zdôvodníš ju
   písomne. Držíš sa jej, ale môžeš ju revidovať ak sa zmenia podmienky
   — vždy s písomným odôvodnením.
 EARNINGS RISK: 2 pracovné dni pred earnings reportom redukuješ pozíciu
   na max 5% — automaticky, bez výnimky.
-ROZHODOVANIE: Každý deň analyzuješ 5 symbolov (rotujúcich z watchlistu)
-  a prehodnotíš existujúce pozície. Každé rozhodnutie — vrátane
-  "nič nerobiť" — musí byť písomne zdôvodnené v investment memo.
+ROZHODOVANIE: Každý deň skenuješ celý watchlist, vyberáš 2-3 symboly na
+  hĺbkovú analýzu a prehodnotíš existujúce pozície. Každé rozhodnutie —
+  vrátane "nič nerobiť" — musí byť písomne zdôvodnené v investment memo.
 BENCHMARK: Porovnávaš sa voči SPY. Cieľ je dlhodobý outperformance.
 TRANSPARENTNOSŤ: Každý trade musí obsahovať: signály ktoré ťa viedli,
   čo si zvažoval alternatívne a prečo si to zamietol.
@@ -126,10 +129,10 @@ TRANSPARENTNOSŤ: Každý trade musí obsahovať: signály ktoré ťa viedli,
 ## Agent — 2-level loop
 
 ```
-Level 1 — Screening (max_tokens: 512)
-  → quotes + analyst recommendation pre 5 rotujúcich symbolov
-  → Claude rozhodne ktoré 2-3 idú do deep dive
-  → ~1,500 input tokenov
+Level 1 — Screening (max_tokens: 1024)
+  → loop pre-fetchne quotes + analyst recommendation pre celý watchlist
+  → Claude v jednom volaní zoradí, vyberie 2-3 do deep dive + upraví watchlist
+  → ~1,500-2,500 input tokenov
 
 Level 2 — Deep dive (max_tokens: 2048)
   → fundamentals + news + insider sentiment + earnings calendar
@@ -147,7 +150,11 @@ Kumulatívny spend cap: ekvivalent $5 → agent sa vypne
 
 ## Watchlist
 
-`AAPL, MSFT, NVDA, JPM, AMZN, GOOGL, META, BRK.B, SPY, QQQ`
+Agent-managed (max 30). Sektorovo diverzifikovaný seed (14):
+
+`AAPL, MSFT, NVDA, AMZN, GOOGL, JPM, BRK.B, UNH, LLY, XOM, CAT, PG, SPY, QQQ`
+
+Agent počas behu pridáva/odoberá symboly (validované cez Finnhub quote).
 
 -----
 
@@ -155,14 +162,14 @@ Kumulatívny spend cap: ekvivalent $5 → agent sa vypne
 
 ### Claude API
 
-- Per-call max_tokens: Screening 512 / Deep dive 2048 / Tools 256
+- Per-call max_tokens: Screening 1024 / Deep dive 2048
 - Daily token budget cap: 8,000 tokenov → blok + email
 - Kumulatívny cap: $5 ekvivalent → agent vypnutý
 - Anthropic Console: manuálne spending limit $10
 
 ### Finnhub
 
-- Rate limiter: max 30 calls/min (50% free tier)
+- Rate limiter: max 42 calls/min (~70% free tier of 60/min)
 - Daily call counter v Blob: cap 200 calls/deň
 - Cache TTL: 15 minút
 

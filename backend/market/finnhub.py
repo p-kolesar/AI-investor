@@ -16,8 +16,9 @@ CACHE_FILE = "prices_cache.parquet"
 USAGE_FILE = "finnhub_usage.parquet"
 CACHE_TTL_MINUTES = 15
 
-# Cost guardrails (spec: 50% of free tier / day cap in Blob).
-RATE_LIMIT_PER_MIN = 30
+# Cost guardrails. Free tier is 60 calls/min; we throttle to ~70% of it.
+# DAILY_CALL_CAP is our own safety net (Finnhub free has no daily cap).
+RATE_LIMIT_PER_MIN = 42
 DAILY_CALL_CAP = 200
 
 
@@ -162,6 +163,20 @@ class FinnhubClient:
                 "strong_sell": latest.get("strongSell"),
             }
         return {"period": None, "strong_buy": None, "buy": None, "hold": None, "sell": None, "strong_sell": None}
+
+    def get_earnings(self, symbol: str) -> dict:
+        """Get the next upcoming earnings date (for the earnings-risk rule)."""
+        data = self._get(
+            "/calendar/earnings",
+            {
+                "symbol": symbol,
+                "from": datetime.now().strftime("%Y-%m-%d"),
+                "to": (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d"),
+            },
+        )
+        rows = data.get("earningsCalendar") if isinstance(data, dict) else None
+        next_date = rows[0].get("date") if rows else None
+        return {"next_earnings_date": next_date}
 
     def get_price_target(self, symbol: str) -> dict:
         """Get analyst price target (high/low/mean/median)."""
