@@ -18,6 +18,14 @@ param location string = resourceGroup().location
 @description('Python version for the Function App runtime.')
 param pythonVersion string = '3.13'
 
+@description('Finnhub API key (passed from a GitHub secret).')
+@secure()
+param finnhubApiKey string
+
+@description('Claude API key (passed from a GitHub secret).')
+@secure()
+param claudeApiKey string
+
 // ---- Derived names ----------------------------------------------------------
 var uniqueSuffix = uniqueString(resourceGroup().id)
 var storageAccountName = take(toLower('st${baseName}${environmentName}${uniqueSuffix}'), 24)
@@ -149,6 +157,14 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         {
           name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
           value: appInsights.properties.ConnectionString
+        }
+        {
+          name: 'FINNHUB_API_KEY'
+          value: finnhubApiKey
+        }
+        {
+          name: 'CLAUDE_API_KEY'
+          value: claudeApiKey
         }
       ]
     }
