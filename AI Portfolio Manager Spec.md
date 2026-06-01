@@ -27,6 +27,7 @@ Edukačný projekt ako živá demonštrácia GenAI pre hands-on workshop v capit
 ai-portfolio-manager/
 ├── backend/
 │   ├── function_app.py
+│   ├── trading.py
 │   ├── agent/
 │   │   ├── loop.py
 │   │   ├── tools.py
@@ -35,26 +36,29 @@ ai-portfolio-manager/
 │   │   └── finnhub.py
 │   ├── storage/
 │   │   └── blobs.py
+│   ├── host.json
 │   ├── requirements.txt
 │   └── local.settings.json.example
-├── frontend-prod/
+├── infra/
+│   ├── main.bicep                 # Function App (+CORS) + Static Web App (prod, Free)
+│   └── main.parameters.json
+├── frontend-prod/                 # React + Vite, dark mode
 │   ├── src/
 │   │   ├── App.jsx
-│   │   └── views/
+│   │   ├── api.js                 # jediný backend seam (+ stub dáta bez API)
+│   │   ├── views/                 # Dashboard, Positions, AgentLog, Performance
+│   │   └── components/
 │   ├── package.json
+│   ├── vite.config.js
 │   └── staticwebapp.config.json
-├── frontend-beta/
-│   ├── src/
-│   │   ├── App.jsx
-│   │   └── views/
-│   ├── package.json
-│   └── staticwebapp.config.json
+├── frontend-beta/                 # PLÁNOVANÉ — kópia prod + 2 bugy − Performance
 └── .github/
     └── workflows/
-        ├── deploy-backend.yml
+        ├── infra.yml              # Bicep infra
+        ├── deploy.yml             # backend Function code
         ├── deploy-frontend-prod.yml
-        ├── deploy-frontend-beta.yml
-        └── daily-agent.yml
+        ├── daily-agent.yml
+        └── deploy-frontend-beta.yml   # PLÁNOVANÉ (s frontend-beta)
 ```
 
 -----
@@ -192,14 +196,15 @@ cost = (input_tokens * 3.00 + output_tokens * 15.00) / 1_000_000
 
 -----
 
-## GitHub Actions — 4 workflows
+## GitHub Actions — workflows
 
-|Workflow                  |Trigger                                                      |
-|--------------------------|-------------------------------------------------------------|
-|`deploy-backend.yml`      |Push to main → Function App                                  |
-|`deploy-frontend-prod.yml`|Push to main → Static Web Apps prod                          |
-|`deploy-frontend-beta.yml`|Push to main → Static Web Apps beta                          |
-|`daily-agent.yml`         |Cron 08:30 UTC Mon-Fri + US holiday check + email pri failure|
+|Workflow                  |Trigger                                                      |Stav|
+|--------------------------|-------------------------------------------------------------|----|
+|`infra.yml`               |Push to main (`infra/**`) + manual → Bicep infra             |✅|
+|`deploy.yml`              |Push to main (`backend/**`) + manual → Function App          |✅|
+|`deploy-frontend-prod.yml`|Push to main (`frontend-prod/**`) + manual → Static Web App  |✅|
+|`daily-agent.yml`         |Cron 08:30 UTC Mon-Fri + US holiday check + email pri failure|✅|
+|`deploy-frontend-beta.yml`|Push to main (`frontend-beta/**`) → Static Web Apps beta     |⏳ plánované|
 
 -----
 
@@ -318,6 +323,29 @@ Nahrať na SharePoint pred sessionou:
 
 -----
 
+## Implementačný stav (k 2026-06-01)
+
+|Komponent                                   |Stav|
+|--------------------------------------------|----|
+|Backend (agent, endpointy, storage, trading)|✅ hotové|
+|Infra (Function App + prod SWA + CORS)       |✅ hotové|
+|`frontend-prod` (4-tab dashboard)            |✅ hotové a nasadené|
+|Daily agent workflow                         |✅ funkčné|
+|`frontend-beta` (workshop bug-hunt kópia)    |⏳ plánované|
+|Dashboard grafy na reálnych dátach           |⏳ demo dáta, kým nepribudne `/history` endpoint|
+
+Poznámky k stavu:
+- **Frontend:** React + Vite (dark mode). Beží aj bez backendu na stub dátach;
+  `VITE_API_BASE` ho prepne na živé API. Hosting: **Free Static Web App + CORS**
+  (nie linked-backend — kvôli nákladovému stropu).
+- **Grafy:** portfolio-vs-SPY line + daily P&L bar bežia na demo časovej rade.
+  Backend zatiaľ neslúži dennú časovú radu (`benchmark.parquet` je stub, žiadny
+  `/history` endpoint). Sharpe / max drawdown na Performance tabe sú z rovnakého
+  dôvodu stubnuté. Po pridaní `/history` sa mení len `api.js` `getHistory()`, UI
+  ostáva. Súvisí s **Fázou 7** (fine-tuning) a budúcim backend endpointom.
+
+-----
+
 ## Poradie generovania kódu
 
 1. `backend/` — storage → market data → agent → endpoints
@@ -335,3 +363,53 @@ Nahrať na SharePoint pred sessionou:
 - **Cold start:** Consumption plan má ~2-3s cold start — OK pre demo
 - **US sviatky:** daily-agent.yml obsahuje holiday check pred spustením
 - **Init:** pred prvým agent runom zavolať `GET /setup`
+
+-----
+
+## Fáza 7 — Fine-tuning P&L výkonnosti autonómneho agenta
+
+Iteratívne vylepšenia, ktoré zlepšujú výnos/riziko portfólia bez narušenia
+nákladového rozpočtu (`$5` kumulatívny cap, Finnhub 200 calls/deň). Zoznam je
+otvorený — nižšie je prvá konkrétna položka, ostatné sa **dodefinujú**.
+
+### 7.1 — Intraday monitoring otvorených pozícií (Level 0)
+
+**Problém:** denný loop rieši *deliberáciu* (sken watchlistu, nové pozície,
+revízia stratégie) — to stačí raz denne. Ale *risk-monitoring otvorených
+pozícií* na dennej frekvencii je príliš pomalý: stop-loss alebo news shock môže
+prísť kedykoľvek počas dňa.
+
+**Riešenie:** pridať tretiu, ľahšiu vrstvu *pod* existujúci Level 1/2 loop:
+
+|Tier                       |Frekvencia               |Rozsah          |LLM?             |Cost |
+|---------------------------|-------------------------|----------------|-----------------|-----|
+|**L0 — Guardrail monitor** |každých 30–60 min (RTH)  |len otvorené poz.|len pri triggeri |~$0  |
+|L1 — Screening             |denne                    |celý watchlist  |1 volanie        |lacné|
+|L2 — Deep dive             |denne                    |2–3 symboly     |tool use         |hlavný|
+
+- **Deterministické pravidlá** (bez LLM): stop-loss (napr. −8% od avg cost),
+  take-profit / trailing stop, jednorazový pohyb > X% od poslednej kontroly,
+  earnings do 2 prac. dní → trim na 5%. Stopky musia fungovať aj keď je spend
+  cap vyčerpaný.
+- **Eskalácia na Claude** len pri nuansovanom triggeri (napr. prepad na
+  správach → cut/hold), a to s kontextom **jedinej** pozície (~1–2k tokenov),
+  nie celého watchlistu.
+- **Implementácia:** nový `POST /agent/monitor` (`monitor_positions()`
+  recykluje `FinnhubClient` + `apply_trade`); druhý GitHub Actions cron
+  (`*/30 13-20 * * 1-5` UTC) alebo Azure Functions Timer trigger; stĺpec `type`
+  (`daily`/`monitor`) v `agent_log` na odlíšenie v Agent Log tabe.
+
+**Constraints (špecifické pre tento stack):**
+
+- Cache TTL = 15 min → **15 min je efektívne minimum** frekvencie; sweet spot
+  30–60 min (real-time websockety sú paid tier).
+- Finnhub 200 calls/deň: ~10 pozícií × 13 okien (½h) ≈ 130 + denný run ≈ 30 →
+  tesné; **hodinový** monitoring (≈70) je bezpečnejší, alebo zvýšiť cap.
+- GitHub Actions cron je best-effort (oneskorenie 5–15 min) — pre paper trading
+  OK; pre presné ticky je lepší Azure Timer trigger.
+
+### 7.2 — Ďalšie položky (bude definované)
+
+- *(TBD)* — tuning parametrov stop-loss / position sizing na základe 2-týždňovej histórie
+- *(TBD)* — …
+- *(TBD)* — …
