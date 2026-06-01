@@ -72,8 +72,7 @@ jobs:
         with:
           app-name: ${{ steps.discover.outputs.name }}
           package: backend
-          scm-do-build-during-deployment: true
-          enable-oryx-build: true
+          remote-build: true
 
       - name: Smoke test /api/health
         run: |
