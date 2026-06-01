@@ -50,23 +50,6 @@ jobs:
             echo "name=$name" >> "$GITHUB_OUTPUT"
             echo "host=$host" >> "$GITHUB_OUTPUT"
 
-      - name: Configure app settings
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            : "${FINNHUB_API_KEY:?FINNHUB_API_KEY secret is empty — add it under repo Settings → Secrets and variables → Actions}"
-            : "${CLAUDE_API_KEY:?CLAUDE_API_KEY secret is empty — add it under repo Settings → Secrets and variables → Actions}"
-            az functionapp config appsettings set \
-              --name "${{ steps.discover.outputs.name }}" \
-              --resource-group "$AZURE_RESOURCE_GROUP" \
-              --settings \
-                FINNHUB_API_KEY="$FINNHUB_API_KEY" \
-                CLAUDE_API_KEY="$CLAUDE_API_KEY" \
-              --output none
-        env:
-          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
-          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
-
       - name: Deploy to Function App
         uses: azure/functions-action@v1
         with:
