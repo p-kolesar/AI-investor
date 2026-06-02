@@ -4,7 +4,7 @@ name: Daily Agent
 # GitHub emails the workflow owner automatically — that is the "email on failure".
 on:
   schedule:
-    - cron: "30 8 * * 1-5"
+    - cron: "55 5 * * 1-5"
   workflow_dispatch:
 
 permissions:
