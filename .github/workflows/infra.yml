@@ -42,13 +42,15 @@ jobs:
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
         with:
           inlineScript: |
-            : "${CLAUDE_API_KEY:?CLAUDE_API_KEY secret is empty — add it under repo Settings → Secrets and variables → Actions}"
+            # baseName: use the AZURE_BASE_NAME variable if set, else fall back to
+            # the parameters.json default ('myapp'). claudeApiKey is optional — the
+            # bare shell deploys without it; set the secret once you add an agent.
             outputs=$(az deployment group create \
               --resource-group "$AZURE_RESOURCE_GROUP" \
               --name "infra-$GITHUB_RUN_NUMBER" \
               --template-file infra/main.bicep \
               --parameters infra/main.parameters.json \
-              --parameters baseName="$AZURE_BASE_NAME" \
+              --parameters baseName="${AZURE_BASE_NAME:-myapp}" \
               --parameters claudeApiKey="$CLAUDE_API_KEY" \
               --query properties.outputs -o json)
 

@@ -16,12 +16,14 @@ obj/
 # Bicep
 *.bicepparam.json
 
-# Editor / OS
+# Editor / OS / tooling
 .vscode/
 .idea/
+.claude/
 .DS_Store
 Thumbs.db
 
-
-__azurite*
-__*
+# Azurite local-storage emulator artifacts
+__azurite_db*__*
+__blobstorage__/
+__queuestorage__/

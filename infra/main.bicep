@@ -22,9 +22,9 @@ param location string = resourceGroup().location
 @description('Python version for the Function App runtime.')
 param pythonVersion string = '3.13'
 
-@description('Claude API key (passed from a GitHub secret).')
+@description('Claude API key (passed from a GitHub secret). Optional — leave empty to deploy the bare shell; set it once you add a Claude agent.')
 @secure()
-param claudeApiKey string
+param claudeApiKey string = ''
 
 // ---- Derived names ----------------------------------------------------------
 var uniqueSuffix = uniqueString(resourceGroup().id)
