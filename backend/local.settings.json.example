@@ -3,7 +3,7 @@
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "APPLICATIONINSIGHTS_CONNECTION_STRING": "",
-    "FINNHUB_API_KEY": "d8em771r01qth3ci5kk0",
+    "FINNHUB_API_KEY": "d8em7...",
     "CLAUDE_API_KEY": "sk-ant-..."
   }
 }
