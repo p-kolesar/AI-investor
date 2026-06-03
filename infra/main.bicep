@@ -33,7 +33,7 @@ var functionAppName = 'func-${baseName}-${environmentName}-${uniqueSuffix}'
 var hostingPlanName = 'plan-${baseName}-${environmentName}'
 var appInsightsName = 'appi-${baseName}-${environmentName}'
 var logAnalyticsName = 'log-${baseName}-${environmentName}'
-var staticSiteProdName = 'stapp-${baseName}-${environmentName}-prod-${uniqueSuffix}'
+var staticSiteName = 'stapp-${baseName}-${environmentName}-${uniqueSuffix}'
 var deploymentContainerName = 'deploymentpackage'
 var deploymentStorageConnSettingName = 'DEPLOYMENT_STORAGE_CONNECTION_STRING'
 
@@ -161,7 +161,7 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
       // Bicep resolves the dependency so the SWA is created first.
       cors: {
         allowedOrigins: [
-          'https://${staticSiteProd.properties.defaultHostname}'
+          'https://${staticSite.properties.defaultHostname}'
         ]
       }
     }
@@ -169,13 +169,13 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
 }
 
 // ---- Static Web App (Free) --------------------------------------------------
-// Public, no-auth SPA (prod). Deployed via the SWA GitHub Action with a
-// deployment token (provider: None = no SWA-managed repo integration). Free
-// tier keeps this within a low cost budget.
+// Public, no-auth SPA. Deployed via the SWA GitHub Action with a deployment
+// token (provider: None = no SWA-managed repo integration). Free tier keeps
+// this within a low cost budget.
 // NOTE: Static Web Apps are only offered in a subset of regions
 // (e.g. westeurope, eastus2, westus2, centralus, eastasia).
-resource staticSiteProd 'Microsoft.Web/staticSites@2024-04-01' = {
-  name: staticSiteProdName
+resource staticSite 'Microsoft.Web/staticSites@2024-04-01' = {
+  name: staticSiteName
   location: location
   sku: {
     name: 'Free'
@@ -191,5 +191,5 @@ output functionAppName string = functionApp.name
 output functionAppDefaultHostname string = functionApp.properties.defaultHostName
 output storageAccountName string = storageAccount.name
 output resourceGroupName string = resourceGroup().name
-output staticWebAppProdName string = staticSiteProd.name
-output staticWebAppProdHostname string = staticSiteProd.properties.defaultHostname
+output staticWebAppName string = staticSite.name
+output staticWebAppHostname string = staticSite.properties.defaultHostname

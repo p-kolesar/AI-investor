@@ -21,16 +21,16 @@ fill in your project's context, and build.
 .github/workflows/
   infra.yml                 # provisions/updates Azure infra (infra/** + manual)
   deploy.yml                # deploys the Python function code (backend/** + manual)
-  deploy-frontend-prod.yml  # builds + deploys frontend-prod to its Static Web App
+  deploy-frontend.yml       # builds + deploys frontend to its Static Web App
 infra/
   main.bicep                # Storage, Log Analytics + App Insights, Flex Consumption
-                            # Function App (+ CORS), Free Static Web App (prod)
+                            # Function App (+ CORS), Free Static Web App
   main.parameters.json      # baseName / environmentName / pythonVersion
 backend/
   function_app.py           # Python v2 HTTP endpoints (see below)
   host.json, requirements.txt, .funcignore
   local.settings.json.example
-frontend-prod/              # React + Vite SPA (dark theme)
+frontend/                   # React + Vite SPA (dark theme)
   src/App.jsx               # bare shell view (calls /hello)
   src/api.js                # single backend seam (+ stub data when no API configured)
   vite.config.js, staticwebapp.config.json, .env.example
@@ -83,16 +83,16 @@ az ad sp create-for-rbac \
 ## Deployment order
 
 1. **Infra (Bicep)** — Actions → *Infra (Bicep)* → Run. Creates the resource
-   group, Function App, and the prod Static Web App; sets CORS so the SWA can
+   group, Function App, and the Static Web App; sets CORS so the SWA can
    call the API. The run summary prints the Function App + frontend hostnames.
 2. **Deploy (Function code)** — discovers the Function App in the resource group,
    deploys `backend/`, and smoke-tests `GET /api/health`.
-3. **Deploy Frontend (prod)** — builds `frontend-prod` with `VITE_API_BASE`
+3. **Deploy Frontend** — builds `frontend` with `VITE_API_BASE`
    pointed at the live API and uploads to the Static Web App. (Fetches the SWA
    deploy token at run time — no extra secrets.)
 
 After the first run, pushes to `main` trigger each pipeline by changed path
-(`infra/**`, `backend/**`, `frontend-prod/**`).
+(`infra/**`, `backend/**`, `frontend/**`).
 
 ## Local development
 
@@ -114,7 +114,7 @@ func start    # requires Azure Functions Core Tools v4
 ### Frontend
 
 ```bash
-cd frontend-prod
+cd frontend
 npm install
 npm run dev          # runs on stub data with no backend
 ```
@@ -135,7 +135,7 @@ VITE_API_PROXY=http://localhost:7071
 2. Add backend routes in `backend/function_app.py`; add dependencies to
    `backend/requirements.txt`.
 3. Add new Azure resources (data containers, etc.) in `infra/main.bicep`.
-4. Build out `frontend-prod/` — keep all backend calls behind `src/api.js`.
+4. Build out `frontend/` — keep all backend calls behind `src/api.js`.
 
 ## Notes
 

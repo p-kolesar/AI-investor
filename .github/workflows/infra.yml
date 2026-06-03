@@ -54,7 +54,7 @@ jobs:
 
             funcName=$(echo "$outputs" | jq -r '.functionAppName.value')
             host=$(echo "$outputs" | jq -r '.functionAppDefaultHostname.value')
-            swaProdHost=$(echo "$outputs" | jq -r '.staticWebAppProdHostname.value')
+            swaHost=$(echo "$outputs" | jq -r '.staticWebAppHostname.value')
 
             {
               echo "## Infra deployed"
@@ -64,5 +64,5 @@ jobs:
               echo "| Resource group | \`$AZURE_RESOURCE_GROUP\` |"
               echo "| Function App | \`$funcName\` |"
               echo "| Hostname | https://$host |"
-              echo "| Frontend (prod) | https://$swaProdHost |"
+              echo "| Frontend | https://$swaHost |"
             } >> "$GITHUB_STEP_SUMMARY"

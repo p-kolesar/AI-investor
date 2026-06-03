@@ -39,7 +39,7 @@
 | API surface | Azure Functions Python v2 HTTP routes | ✅ `/api/hello`, `/api/health` |
 | AI agent | Claude API (`CLAUDE_API_KEY` already wired into infra + settings) | ⛔ add `anthropic` + your loop |
 | Storage | _(none yet)_ — add Azure Blob / Parquet / DB as needed | ⛔ |
-| Frontend | React + Vite SPA → Azure Static Web Apps (Free) | ✅ `frontend-prod/` |
+| Frontend | React + Vite SPA → Azure Static Web Apps (Free) | ✅ `frontend/` |
 | IaC / CI | Bicep + GitHub Actions (infra / backend / frontend deploy) | ✅ `infra/`, `.github/workflows/` |
 
 > FILL IN — Add the rows your project needs (market data API, database, queue,
@@ -58,14 +58,14 @@ infra/
   main.bicep                 # Storage + Log Analytics/App Insights + Flex
                              # Function App (+CORS) + Free Static Web App
   main.parameters.json       # baseName / environmentName / pythonVersion
-frontend-prod/               # React + Vite SPA (dark theme)
+frontend/                    # React + Vite SPA (dark theme)
   src/App.jsx                # bare shell view
   src/api.js                 # single backend seam (stub data when no API)
   vite.config.js, staticwebapp.config.json, .env.example
 .github/workflows/
   infra.yml                  # provision/update Azure infra
   deploy.yml                 # deploy the Function code (+ /health smoke test)
-  deploy-frontend-prod.yml   # build + deploy the SPA to its Static Web App
+  deploy-frontend.yml        # build + deploy the SPA to its Static Web App
 ```
 
 > FILL IN — Note any new top-level modules you add (e.g. `backend/agent/`,
@@ -111,9 +111,9 @@ _Shell ships with:_
 ## 8. Deployment _(shell — works today)_
 
 1. **Infra (Bicep)** — Actions → *Infra (Bicep)* → Run. Creates the resource
-   group, Function App, and the prod Static Web App; wires CORS.
+   group, Function App, and the Static Web App; wires CORS.
 2. **Deploy (Function code)** — deploys `backend/` and smoke-tests `/api/health`.
-3. **Deploy Frontend (prod)** — builds `frontend-prod` against the live API and
+3. **Deploy Frontend** — builds `frontend` against the live API and
    uploads to the Static Web App.
 
 Required GitHub **secrets**: `AZURE_CREDENTIALS`, `CLAUDE_API_KEY`.
