@@ -29,8 +29,10 @@ placeholders to your project and points it at its own Azure footprint.
       shells coexist in one subscription without clashing.
 - [ ] **Region** — set `AZURE_LOCATION` to a Static Web Apps region
       (e.g. `westeurope`, `eastus2`, `westus2`, `centralus`, `eastasia`).
-- [ ] **Secrets** — add `AZURE_CREDENTIALS` and `CLAUDE_API_KEY` under
-      Repo → Settings → Secrets and variables → Actions. (See §8 / `README.md`.)
+- [ ] **Secrets** — add `AZURE_CREDENTIALS` (required) under
+      Repo → Settings → Secrets and variables → Actions. `CLAUDE_API_KEY` is
+      optional — the bare shell deploys without it; add it when you wire up an
+      agent. (See §8 / `README.md`.)
 - [ ] **App labels** — replace "App Shell" in `frontend/index.html` (title) and
       `frontend/src/App.jsx` (`<h1>`), and the `name` in `frontend/package.json`.
 - [ ] **This charter** — set the `<PROJECT NAME>` heading, the owner/date, and
@@ -152,9 +154,11 @@ _Shell ships with:_
 3. **Deploy Frontend** — builds `frontend` against the live API and
    uploads to the Static Web App.
 
-Required GitHub **secrets**: `AZURE_CREDENTIALS`, `CLAUDE_API_KEY`.
-Required GitHub **variables**: `AZURE_RESOURCE_GROUP`, `AZURE_LOCATION`
-(a Static Web Apps region), `AZURE_BASE_NAME`. See `README.md` for details.
+GitHub **secrets**: `AZURE_CREDENTIALS` (required); `CLAUDE_API_KEY` (optional —
+only needed once an agent is added). GitHub **variables**: `AZURE_RESOURCE_GROUP`,
+`AZURE_LOCATION` (a Static Web Apps region), and `AZURE_BASE_NAME` (optional —
+falls back to `myapp`). Run **Infra first**, then the backend/frontend deploys.
+See `README.md` for details.
 
 ---
 

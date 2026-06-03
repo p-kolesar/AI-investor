@@ -69,8 +69,8 @@ az ad sp create-for-rbac \
 
 | Secret | Used by |
 | --- | --- |
-| `AZURE_CREDENTIALS` | all Azure workflows (login) |
-| `CLAUDE_API_KEY` | infra (injected into the Function App) |
+| `AZURE_CREDENTIALS` | all Azure workflows (login) — **required** |
+| `CLAUDE_API_KEY` | infra (injected into the Function App) — **optional**; the bare shell deploys without it, set it once you add a Claude agent |
 
 ### 3. Repository variables
 
@@ -93,8 +93,13 @@ az ad sp create-for-rbac \
    pointed at the live API and uploads to the Static Web App. (Fetches the SWA
    deploy token at run time — no extra secrets.)
 
-After the first run, pushes to `main` trigger each pipeline by changed path
-(`infra/**`, `backend/**`, `frontend/**`).
+Run these **in order the first time** (use *Run workflow* / `workflow_dispatch`).
+On an initial push to `main` all three fire in parallel by changed path, so the
+backend and frontend jobs will fail until Infra has created the resources — they
+exit with a clear "Run the Infra workflow first" message. Run Infra, wait for it
+to finish, then run the other two (or just re-run them). After that, pushes to
+`main` trigger each pipeline by changed path (`infra/**`, `backend/**`,
+`frontend/**`).
 
 ## Local development
 

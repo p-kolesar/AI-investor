@@ -22,6 +22,7 @@ obj/
 .DS_Store
 Thumbs.db
 
-
-__azurite*
-__*
+# Azurite local-storage emulator artifacts
+__azurite_db*__*
+__blobstorage__/
+__queuestorage__/
