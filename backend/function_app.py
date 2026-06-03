@@ -1,19 +1,32 @@
 import json
 import logging
-from datetime import datetime
+import time
+from datetime import datetime, timezone
 
 import polars as pl
+import requests
 import azure.functions as func
 
 from market.finnhub import FinnhubClient
 from storage.blobs import write_parquet, read_parquet
 from trading import apply_trade, TradeError
 from agent.loop import run_agent
+from realestate.scraper import (
+    BASE,
+    UA,
+    CONTAINER as RE_CONTAINER,
+    _robots_allows,
+    _parse,
+    _write_csv,
+    _coverage,
+)
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
 CONTAINER = "papertrading"
 INITIAL_CASH = 100_000
+
+HTTP_BUDGET_S = 150  # stop scraping here; guarantees we respond well under the 230s Functions limit
 
 # ---- Admin: Initialize portfolio ----
 
@@ -243,6 +256,79 @@ def agent_run(req: func.HttpRequest) -> func.HttpResponse:
     except Exception as e:
         logging.error(f"Agent run failed: {e}")
         return func.HttpResponse(json.dumps({"error": str(e)}), status_code=500, mimetype="application/json")
+
+
+# ---- Real estate scraper ----
+
+
+@app.route(route="scrape-realestate", methods=["GET"])
+def scrape_realestate(req: func.HttpRequest) -> func.HttpResponse:
+    """Scrape real-estate listings into a CSV blob.
+
+    Query params: locality (comma-separated, default "bratislava-ruzinov"),
+    deal ("predaj"), type ("byty"), pages (1-10). Stops at HTTP_BUDGET_S to stay
+    under the Functions request timeout; `complete=false` flags an early stop.
+    """
+    t0 = time.time()
+    localities = [s.strip() for s in req.params.get("locality", "bratislava-ruzinov").split(",") if s.strip()]
+    deal = req.params.get("deal", "predaj")
+    ptype = req.params.get("type", "byty")
+    try:
+        pages = max(1, min(int(req.params.get("pages", "1")), 10))
+    except ValueError:
+        pages = 1
+
+    ts = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    session = requests.Session()
+    rows, complete = [], True
+    try:
+        for loc in localities:
+            base_url = f"{BASE}/vysledky/{ptype}/{loc}/{deal}"
+            if not _robots_allows(base_url):
+                continue
+            for n in range(1, pages + 1):
+                if time.time() - t0 > HTTP_BUDGET_S:  # the timing guarantee
+                    complete = False
+                    break
+                url = base_url if n == 1 else f"{base_url}?page={n}"
+                try:
+                    r = session.get(
+                        url,
+                        headers={"User-Agent": UA, "Accept-Language": "sk,en;q=0.8"},
+                        timeout=15,
+                    )
+                    r.raise_for_status()
+                except Exception as e:
+                    logging.error("fetch %s: %s", url, e)
+                    break
+                for rec in _parse(r.text, base_url):
+                    rec.update({"scraped_at": ts, "locality": loc, "deal": deal})
+                    rows.append(rec)
+                time.sleep(1.0)  # politeness between pages
+            if not complete:
+                break
+
+        blob = _write_csv(rows, ts) if rows else None
+        body = {
+            "ok": bool(rows),
+            "complete": complete,
+            "blob": blob,
+            "container": RE_CONTAINER,
+            "coverage": _coverage(rows),
+            "elapsed_s": round(time.time() - t0, 1),
+        }
+        return func.HttpResponse(
+            json.dumps(body, ensure_ascii=False),
+            mimetype="application/json",
+            status_code=200 if rows else 502,
+        )
+    except Exception as e:
+        logging.exception("scrape-realestate failed")
+        return func.HttpResponse(
+            json.dumps({"ok": False, "error": str(e)}),
+            mimetype="application/json",
+            status_code=500,
+        )
 
 
 # ---- Health ----

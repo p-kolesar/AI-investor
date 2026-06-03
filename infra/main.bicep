@@ -36,6 +36,7 @@ var logAnalyticsName = 'log-${baseName}-${environmentName}'
 var staticSiteProdName = 'stapp-${baseName}-${environmentName}-prod-${uniqueSuffix}'
 var deploymentContainerName = 'deploymentpackage'
 var dataContainerName = 'papertrading'
+var realEstateContainerName = 'datain'
 var deploymentStorageConnSettingName = 'DEPLOYMENT_STORAGE_CONNECTION_STRING'
 
 // ---- Storage ----------------------------------------------------------------
@@ -71,6 +72,16 @@ resource deploymentContainer 'Microsoft.Storage/storageAccounts/blobServices/con
 resource dataContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
   parent: blobService
   name: dataContainerName
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
+// Real-estate scrape container (timestamped CSVs from /scrape-realestate).
+// The backend also create_container()s it at runtime, but infra owns it here.
+resource realEstateContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobService
+  name: realEstateContainerName
   properties: {
     publicAccess: 'None'
   }
