@@ -7,6 +7,4 @@ requests
 anthropic
 
 # Real-estate scraper (realestate/scraper.py)
-beautifulsoup4
-lxml
 azure-identity  # managed-identity storage path in _blob_service
