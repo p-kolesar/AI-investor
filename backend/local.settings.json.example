@@ -2,8 +2,8 @@
   "IsEncrypt": false,
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
     "APPLICATIONINSIGHTS_CONNECTION_STRING": "",
-    "FINNHUB_API_KEY": "d8em7...",
     "CLAUDE_API_KEY": "sk-ant-..."
   }
 }

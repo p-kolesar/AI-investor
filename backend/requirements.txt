@@ -1,10 +1,3 @@
-# Azure Functions + AI/data stack
+# Azure Functions Python worker.
+# Add your project dependencies below (e.g. anthropic, azure-storage-blob, polars).
 azure-functions
-azure-storage-blob
-polars
-pyarrow
-requests
-anthropic
-
-# Real-estate scraper (realestate/scraper.py)
-azure-identity  # managed-identity storage path in _blob_service

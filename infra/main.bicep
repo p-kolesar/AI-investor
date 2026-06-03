@@ -1,7 +1,11 @@
 // =============================================================================
-// AI-investor - core infrastructure (Python Function App on Flex Consumption)
+// App shell - core infrastructure (Python Function App on Flex Consumption)
 // Deployed at resource-group scope. The resource group is created by the
 // infra GitHub workflow before this template runs.
+//
+// This is a clean-slate shell: Storage + observability + a Flex Consumption
+// Function App (CORS-enabled) + a Free Static Web App. Add project-specific
+// resources (data containers, queues, app settings) as you build.
 // =============================================================================
 
 targetScope = 'resourceGroup'
@@ -18,10 +22,6 @@ param location string = resourceGroup().location
 @description('Python version for the Function App runtime.')
 param pythonVersion string = '3.13'
 
-@description('Finnhub API key (passed from a GitHub secret).')
-@secure()
-param finnhubApiKey string
-
 @description('Claude API key (passed from a GitHub secret).')
 @secure()
 param claudeApiKey string
@@ -35,8 +35,6 @@ var appInsightsName = 'appi-${baseName}-${environmentName}'
 var logAnalyticsName = 'log-${baseName}-${environmentName}'
 var staticSiteProdName = 'stapp-${baseName}-${environmentName}-prod-${uniqueSuffix}'
 var deploymentContainerName = 'deploymentpackage'
-var dataContainerName = 'papertrading'
-var realEstateContainerName = 'datain'
 var deploymentStorageConnSettingName = 'DEPLOYMENT_STORAGE_CONNECTION_STRING'
 
 // ---- Storage ----------------------------------------------------------------
@@ -67,25 +65,8 @@ resource deploymentContainer 'Microsoft.Storage/storageAccounts/blobServices/con
   }
 }
 
-// Application data container (Parquet files: portfolio, trades, cache, …).
-// Also created at runtime by the backend, but declared here so infra owns it.
-resource dataContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
-  parent: blobService
-  name: dataContainerName
-  properties: {
-    publicAccess: 'None'
-  }
-}
-
-// Real-estate scrape container (timestamped CSVs from /scrape-realestate).
-// The backend also create_container()s it at runtime, but infra owns it here.
-resource realEstateContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
-  parent: blobService
-  name: realEstateContainerName
-  properties: {
-    publicAccess: 'None'
-  }
-}
+// Add project data containers here as you build (declare them so infra owns
+// them rather than relying on runtime create_container()).
 
 var storageConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storageAccount.listKeys().keys[0].value}'
 
@@ -171,10 +152,6 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
           value: appInsights.properties.ConnectionString
         }
         {
-          name: 'FINNHUB_API_KEY'
-          value: finnhubApiKey
-        }
-        {
           name: 'CLAUDE_API_KEY'
           value: claudeApiKey
         }
@@ -192,12 +169,11 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
 }
 
 // ---- Static Web App (Free) --------------------------------------------------
-// Public, no-auth SPA (prod) for the workshop. Deployed via the SWA GitHub
-// Action with a deployment token (provider: None = no SWA-managed repo
-// integration). Free tier keeps this within the demo's cost budget.
+// Public, no-auth SPA (prod). Deployed via the SWA GitHub Action with a
+// deployment token (provider: None = no SWA-managed repo integration). Free
+// tier keeps this within a low cost budget.
 // NOTE: Static Web Apps are only offered in a subset of regions
 // (e.g. westeurope, eastus2, westus2, centralus, eastasia).
-// A second SWA for frontend-beta will be added alongside Phase 4.
 resource staticSiteProd 'Microsoft.Web/staticSites@2024-04-01' = {
   name: staticSiteProdName
   location: location
