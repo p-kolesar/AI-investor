@@ -10,8 +10,8 @@
 
 targetScope = 'resourceGroup'
 
-@description('Base name used to derive all resource names (lowercase alphanumeric).')
-param baseName string = 'aiinvestor'
+@description('Base name used to derive all resource names (lowercase alphanumeric, keep it short). CHANGE per project — CI overrides this via the AZURE_BASE_NAME Actions variable; this default is only the local/manual-deploy fallback.')
+param baseName string = 'myapp'
 
 @description('Short environment name, e.g. dev / prod.')
 param environmentName string = 'dev'

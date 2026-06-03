@@ -3,8 +3,10 @@
 A clean-slate, deployable starting point for building agentic software on
 Azure quickly. It ships as a working skeleton — a Python Azure Function App, a
 React/Vite SPA, Bicep infrastructure, and GitHub Actions CI/CD — with all
-business logic stripped out. Copy [Project Charter.md](Project%20Charter.md),
-fill in your project's context, and build.
+business logic stripped out. **Starting a new project? Begin with the
+[Start here checklist](Project%20Charter.md#0-start-here--initialize-this-shell-for-your-project)
+in the Project Charter** — branch, name your app, point it at a resource group,
+then fill in the rest and build.
 
 ## What's in the box
 
@@ -55,7 +57,7 @@ infra job can create the resource group) and save the JSON as the
 
 ```bash
 az ad sp create-for-rbac \
-  --name "gh-appshell" \
+  --name "gh-myapp" \
   --role Contributor \
   --scopes /subscriptions/<SUBSCRIPTION_ID> \
   --sdk-auth
@@ -76,9 +78,9 @@ az ad sp create-for-rbac \
 
 | Variable | Value |
 | --- | --- |
-| `AZURE_RESOURCE_GROUP` | e.g. `rg-appshell-dev` |
+| `AZURE_RESOURCE_GROUP` | e.g. `rg-myapp-dev` |
 | `AZURE_LOCATION` | e.g. `westeurope` *(must be a Static Web Apps region)* |
-| `AZURE_BASE_NAME` | e.g. `appshell` *(also set `baseName` in `infra/main.parameters.json`)* |
+| `AZURE_BASE_NAME` | e.g. `myapp` *(also set `baseName` in `infra/main.parameters.json`)* |
 
 ## Deployment order
 

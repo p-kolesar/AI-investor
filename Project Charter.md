@@ -11,6 +11,42 @@
 
 ---
 
+## 0. Start here — initialize this shell for your project
+
+Do this once, before writing any feature code. It renames the shell from its
+placeholders to your project and points it at its own Azure footprint.
+
+- [ ] **Branch** — don't build on `shell-template`. Create your project's branch
+      (and treat it as that project's main), or copy the shell into a fresh repo:
+      `git checkout -b <project-name>`
+- [ ] **Base name** — pick a short, lowercase-alphanumeric name (replaces the
+      `myapp` placeholder). It seeds every Azure resource name
+      (`func-<baseName>-<env>-…`, `st<baseName><env>…`). Set it in **two** places:
+      - the GitHub Actions **variable** `AZURE_BASE_NAME` (used by CI on `main`), and
+      - `baseName` in `infra/main.parameters.json` (used for local / manual deploys).
+- [ ] **Resource group** — set the `AZURE_RESOURCE_GROUP` variable
+      (e.g. `rg-<project>-dev`). Each project gets its **own** group, so multiple
+      shells coexist in one subscription without clashing.
+- [ ] **Region** — set `AZURE_LOCATION` to a Static Web Apps region
+      (e.g. `westeurope`, `eastus2`, `westus2`, `centralus`, `eastasia`).
+- [ ] **Secrets** — add `AZURE_CREDENTIALS` and `CLAUDE_API_KEY` under
+      Repo → Settings → Secrets and variables → Actions. (See §8 / `README.md`.)
+- [ ] **App labels** — replace "App Shell" in `frontend/index.html` (title) and
+      `frontend/src/App.jsx` (`<h1>`), and the `name` in `frontend/package.json`.
+- [ ] **This charter** — set the `<PROJECT NAME>` heading, the owner/date, and
+      work through the `FILL IN` sections below.
+
+> **Why this scales to many projects in one place.** Resource names derive from
+> `baseName` + `environmentName` + a per-resource-group hash, so a different base
+> name and/or resource group can never collide — you can run several projects
+> from separate branches or repos against the same subscription. One caveat:
+> GitHub Actions `vars`/`secrets` are repo- or **Environment**-scoped, not
+> branch-scoped. To keep distinct values per branch in a single repo, define a
+> GitHub **Environment** per project and move `AZURE_*` there; otherwise give
+> each project its own repo.
+
+---
+
 ## 1. Purpose & scope
 
 > FILL IN — What does this system do, for whom, and why? What is explicitly
