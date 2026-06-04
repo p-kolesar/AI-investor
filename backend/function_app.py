@@ -258,6 +258,31 @@ def agent_run(req: func.HttpRequest) -> func.HttpResponse:
         return func.HttpResponse(json.dumps({"error": str(e)}), status_code=500, mimetype="application/json")
 
 
+# ---- Agent: Daily timer trigger ----
+
+
+# NCRONTAB is {second} {minute} {hour} {day} {month} {day-of-week}. The hour is
+# interpreted in the app's WEBSITE_TIME_ZONE; set that app setting to
+# "Central European Standard Time" (Windows) / "Europe/Bratislava" (Linux) so
+# 07:55 fires at 07:55 CET/CEST. Without it, Azure uses UTC.
+@app.timer_trigger(arg_name="timer", schedule="0 55 7 * * *", run_on_startup=False, use_monitor=True)
+def daily_agent_timer(timer: func.TimerRequest) -> None:
+    """Run the autonomous agent every weekday at 07:55 CET; skip Sat/Sun.
+
+    Same inner call as POST /api/agent/run, just driven by the timer instead of HTTP.
+    """
+    now = datetime.now()
+    if now.weekday() >= 5:  # Mon=0 .. Sat=5, Sun=6
+        logging.info("Weekend (%s) — skipping daily agent run.", now.strftime("%A"))
+        return
+    try:
+        result = run_agent()
+        logging.info("Daily agent run complete: %s", json.dumps(result, default=str))
+    except Exception:
+        logging.exception("Daily agent run failed")
+        raise
+
+
 # ---- Real estate scraper ----
 
 
