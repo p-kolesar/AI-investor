@@ -1,10 +1,12 @@
 name: Daily Agent
 
-# Cron 08:30 UTC Mon-Fri + manual. On failure (including spend/token caps),
-# GitHub emails the workflow owner automatically — that is the "email on failure".
+# Manual only. The scheduled run is now handled by the Azure Functions timer
+# trigger (daily_agent_timer in backend/function_app.py, 07:55 CET weekdays);
+# the cron below is disabled to avoid double-running the agent.
+# On failure (including spend/token caps), GitHub emails the workflow owner.
 on:
-  schedule:
-    - cron: "55 5 * * 1-5"
+  # schedule:
+  #   - cron: "55 5 * * 1-5"
   workflow_dispatch:
 
 permissions:
