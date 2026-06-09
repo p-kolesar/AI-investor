@@ -207,13 +207,13 @@ def get_snapshots(req: func.HttpRequest) -> func.HttpResponse:
         return func.HttpResponse(json.dumps({"error": str(e)}), status_code=500, mimetype="application/json")
 
 
-@app.route(route="snapshot", methods=["POST"])
+@app.route(route="snapshot", methods=["GET"])
 def write_snapshot(req: func.HttpRequest) -> func.HttpResponse:
     """Append a live-marked snapshot of the *current* portfolio + cash on demand —
     no agent run, no Claude calls, no trades. Returns the written row."""
     try:
         result = snapshot_portfolio()
-        return func.HttpResponse(json.dumps(result, default=str), mimetype="application/json", status_code=201)
+        return func.HttpResponse(json.dumps(result, default=str), mimetype="application/json", status_code=200)
     except Exception as e:
         logging.error(f"Snapshot write failed: {e}")
         return func.HttpResponse(json.dumps({"error": str(e)}), status_code=500, mimetype="application/json")
