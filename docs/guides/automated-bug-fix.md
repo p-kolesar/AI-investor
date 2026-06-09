@@ -26,6 +26,10 @@ issue labeled `bug`
   `sk-ant-…` key). No new secret needed — the action's `anthropic_api_key` input
   is wired to it.
 - **Label:** ensure a `bug` label exists in the repo.
+- **Issue form:** [`​.github/ISSUE_TEMPLATE/bug_report.yml`](../../.github/ISSUE_TEMPLATE/bug_report.yml)
+  collects repro steps / expected / actual to raise the "clear enough to fix"
+  hit rate. It deliberately does **not** auto-apply `bug` — you add that label
+  when ready, which is the trigger gate.
 
 ## Guardrails
 
