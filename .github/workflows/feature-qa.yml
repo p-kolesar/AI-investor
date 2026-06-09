@@ -61,6 +61,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         with:
           anthropic_api_key: ${{ secrets.CLAUDE_API_KEY }}
+          # QA is triggered by a PR the build agent opened as claude[bot]. The action
+          # blocks bot-initiated events by default; allow our own bot so QA can run.
+          allowed_bots: "claude"
           prompt: |
             You are the QA agent. A feature PR is ready for review. Validate it
             against the acceptance criteria of its linked issue. Do NOT change code
