@@ -94,7 +94,7 @@ disables the agent.
 ## `snapshots.parquet` — daily portfolio snapshots (append-only)
 
 Written by `_write_snapshot` ([agent/loop.py](../../../backend/agent/loop.py)):
-once at the end of every `run_agent()` run, and on demand via `POST /api/snapshot`
+once at the end of every `run_agent()` run, and on demand via `GET /api/snapshot`
 (`snapshot_portfolio()` — no agent/Claude calls, just current portfolio + live
 quotes). Backs the frontend **Daily** tab via `GET /api/snapshots`.
 
