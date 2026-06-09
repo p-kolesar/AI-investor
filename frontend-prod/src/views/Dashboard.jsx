@@ -1,4 +1,4 @@
-import { getPortfolio, getHistory } from "../api.js";
+import { getPortfolio, getHistory, getPrice } from "../api.js";
 import { useAsync } from "../components/useAsync.js";
 import { KpiCard } from "../components/KpiCard.jsx";
 import { Loading, ErrorState } from "../components/States.jsx";
@@ -13,7 +13,12 @@ const totalReturn = (series, key) =>
 
 async function loadDashboard() {
   const [portfolio, history] = await Promise.all([getPortfolio(), getHistory()]);
-  return { portfolio, history };
+  // Re-mark positions with live prices so Portfolio Value and P&L (Performance tab)
+  // use the same price basis. The backend stores last-trade market_value, not live.
+  const quotes = await Promise.all(portfolio.positions.map((p) => getPrice(p.symbol)));
+  const livePositionsValue = quotes.reduce((sum, q, i) => sum + q.price * portfolio.positions[i].shares, 0);
+  const total_value = livePositionsValue + portfolio.cash;
+  return { portfolio: { ...portfolio, total_value }, history };
 }
 
 export default function Dashboard() {
