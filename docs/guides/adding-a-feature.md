@@ -25,7 +25,8 @@ not a migrated database, so a careless column change corrupts state silently.
 3. **Update docs in the same PR** — schema docs + samples if the data shape
    changed; the relevant architecture doc if behaviour changed; bump
    `Last verified:`.
-4. Add/adjust tests in [`tests/`](../../tests/).
+4. Add/adjust tests in [`tests/`](../../tests/) and run the suite
+   (`backend/.venv/Scripts/python.exe -m pytest`). See [testing.md](testing.md).
 5. Record a [decision](../decisions/) if you made a non-obvious architectural choice.
 
 ## Worked example: add a `realized_pnl` column to `trades`

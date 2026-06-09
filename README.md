@@ -42,7 +42,13 @@ frontend-prod/              # React + Vite dashboard (dark mode), 4 tabs
   src/views/                # Dashboard, Positions, AgentLog, Performance
   src/components/           # KpiCard, Charts, States, hooks, formatters
   vite.config.js, staticwebapp.config.json, .env.example
+docs/                       # documentation: data layer, architecture, guides, ADRs — see docs/README.md
+tests/                      # offline unit tests for key backend modules — see tests/README.md
 ```
+
+> **New to the repo (human or agent)?** Start at [CLAUDE.md](CLAUDE.md) →
+> [docs/README.md](docs/README.md). The data layer (`docs/data/`) is the part you
+> can't infer from the code.
 
 ## Backend endpoints
 

@@ -4,6 +4,7 @@ __pycache__/
 .venv/
 venv/
 .python_packages/
+.pytest_cache/
 
 # Azure Functions
 local.settings.json
