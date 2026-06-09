@@ -142,3 +142,22 @@ def test_write_snapshot_falls_back_to_stored_value_when_unpriceable(blob_store, 
 
     row = blob_store.read_parquet(CONTAINER, "snapshots.parquet").row(-1, named=True)
     assert row["market_value"] == 1234.0          # fell back to stored last-trade value
+
+
+def test_snapshot_portfolio_writes_without_agent(blob_store, monkeypatch):
+    blob_store.seed(CONTAINER, "portfolio.parquet", pl.DataFrame({
+        "symbol": ["AAPL"], "shares": [10],
+        "avg_cost": [100.0], "market_value": [1000.0]}))
+    blob_store.seed(CONTAINER, "cash_ledger.parquet",
+                    pl.DataFrame({"date": [date.today()], "amount": [2000.0]}))
+    blob_store.patch(monkeypatch, loop)
+    # The on-demand path builds its own Finnhub client — no Claude involved.
+    monkeypatch.setattr(loop, "FinnhubClient",
+                        lambda: SimpleNamespace(get_quote=lambda s: {"price": 150.0}))
+
+    result = loop.snapshot_portfolio()
+
+    assert result["market_value"] == 1500.0       # 10 * 150
+    assert result["total"] == 3500.0              # 1500 + 2000 cash
+    assert result["positions"] == [{"symbol": "AAPL", "shares": 10}]
+    assert len(blob_store.read_parquet(CONTAINER, "snapshots.parquet")) == 1
