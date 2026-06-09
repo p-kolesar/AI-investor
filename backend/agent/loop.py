@@ -190,13 +190,14 @@ def _log_run(level1, level2, memo: str) -> None:
     write_parquet(CONTAINER, "agent_log.parquet", pl.concat([log, row], how="diagonal_relaxed"))
 
 
-def _write_snapshot(fc) -> None:
+def _write_snapshot(fc) -> dict:
     """Append a timestamped, live-marked snapshot of the current portfolio + cash.
 
-    Called at the end of every agent run. Positions are re-quoted so market_value
-    reflects live prices (not the last-trade value stored in portfolio.parquet); if
-    a quote is unavailable the stored value is used as a fallback. `positions` is a
-    JSON list of {symbol, shares}. Backs the frontend "Daily" tab (GET /snapshots)."""
+    Pure data + Finnhub quotes — no Claude calls. Positions are re-quoted so
+    market_value reflects live prices (not the last-trade value stored in
+    portfolio.parquet); if a quote is unavailable the stored value is used as a
+    fallback. `positions` is a JSON list of {symbol, shares}. Returns the written
+    snapshot. Backs the frontend "Daily" tab (GET /snapshots)."""
     portfolio = read_parquet(CONTAINER, "portfolio.parquet")
     cash_ledger = read_parquet(CONTAINER, "cash_ledger.parquet")
     cash = float(cash_ledger.row(-1, named=True)["amount"]) if len(cash_ledger) > 0 else 0.0
@@ -210,17 +211,25 @@ def _write_snapshot(fc) -> None:
         market_value += price * p["shares"] if price is not None else p["market_value"]
         holdings.append({"symbol": p["symbol"], "shares": p["shares"]})
 
-    market_value = round(market_value, 2)
-    row = pl.DataFrame(
+    ts = datetime.now()
+    market_value, cash = round(market_value, 2), round(cash, 2)
+    total = round(market_value + cash, 2)
+    append_parquet(CONTAINER, "snapshots.parquet", pl.DataFrame(
         {
-            "timestamp": [datetime.now()],
+            "timestamp": [ts],
             "positions": [json.dumps(holdings)],
             "market_value": [market_value],
-            "cash": [round(cash, 2)],
-            "total": [round(market_value + cash, 2)],
+            "cash": [cash],
+            "total": [total],
         }
-    )
-    append_parquet(CONTAINER, "snapshots.parquet", row)
+    ))
+    return {"timestamp": ts, "positions": holdings, "market_value": market_value, "cash": cash, "total": total}
+
+
+def snapshot_portfolio() -> dict:
+    """Snapshot the current portfolio + cash on demand, independent of an agent run
+    (no Claude calls, no trades). Builds its own Finnhub client. Returns the row."""
+    return _write_snapshot(FinnhubClient())
 
 
 def run_agent() -> dict:
