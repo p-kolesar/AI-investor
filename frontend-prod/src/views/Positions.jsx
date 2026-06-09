@@ -53,6 +53,25 @@ export default function Positions() {
             </tr>
           ))}
         </tbody>
+        <tfoot>
+          {(() => {
+            const totalMarketValue = data.reduce((s, r) => s + r.marketValue, 0);
+            const totalUnrealized = data.reduce((s, r) => s + r.unrealized, 0);
+            const totalCost = data.reduce((s, r) => s + r.avg_cost * r.shares, 0);
+            const totalPnlPct = totalCost ? totalUnrealized / totalCost : null;
+            return (
+              <tr>
+                <td><strong>Total</strong></td>
+                <td />
+                <td />
+                <td />
+                <td className="mono"><strong>{usd(totalMarketValue)}</strong></td>
+                <td className={`mono ${signClass(totalUnrealized)}`}><strong>{usd(totalUnrealized)}</strong></td>
+                <td className={`mono ${signClass(totalPnlPct)}`}><strong>{pct(totalPnlPct)}</strong></td>
+              </tr>
+            );
+          })()}
+        </tfoot>
       </table>
     </div>
   );
