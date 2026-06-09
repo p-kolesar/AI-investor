@@ -34,8 +34,9 @@ POST /api/agent/run (manual trigger)     ├─► run_agent()
                                                      ▼
         apply_trade() ─► portfolio / trades / cash_ledger  (Parquet)
         _log_run()    ─► agent_log                         (Parquet)
+        _write_snapshot() ─► snapshots (live-marked)        (Parquet)
                                                      │
-   React SPA  ◄── /api/portfolio,/trades,/agent/log,/watchlist ◄──┘
+   React SPA  ◄── /api/portfolio,/trades,/snapshots,/agent/log,/watchlist ◄──┘
 ```
 
 ## TODO

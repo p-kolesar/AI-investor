@@ -15,6 +15,7 @@ paper-trading demo data — no secrets or personal data.
 | `agent_log.sample.csv` | **Subset** — the 3 most recent runs. `memo` holds full markdown investment memos (Slovak), so rows are large; this is faithful to production. |
 | `prices_cache.sample.csv` | **Subset** — first 8 of 34 cached symbols. The full cache is a superset of the watchlist (see schema note). |
 | `benchmark.sample.csv` | **Synthetic** — the production blob is empty (stub for the future `/history` endpoint); this shows the intended shape. |
+| `snapshots.sample.csv` | **Synthetic** — the snapshots blob is new (added with the Daily tab); the dev account has not yet accumulated rows. Shows 3 illustrative daily rows; `positions` is the JSON holdings list. |
 
 ## What still reconciles
 
@@ -25,8 +26,8 @@ data-contract relationships hold and can be verified against these files:
   all 11 positions.
 - `cash_ledger` has 21 rows = 1 seed ($100,000) + 20 trades, last row = current cash.
 
-The subset files (`agent_log`, `prices_cache`) and `benchmark` are illustrative
-and do not need to reconcile against the trio.
+The subset files (`agent_log`, `prices_cache`) and the synthetic `benchmark` /
+`snapshots` are illustrative and do not need to reconcile against the trio.
 
 To seed a local store, convert each CSV to Parquet with the dtypes in
 [../../schemas/papertrading.md](../../schemas/papertrading.md) (or call

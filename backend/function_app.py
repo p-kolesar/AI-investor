@@ -104,6 +104,18 @@ def admin_init(req: func.HttpRequest) -> func.HttpResponse:
         )
         write_parquet(CONTAINER, "cash_ledger.parquet", cash_ledger)
 
+        # Daily snapshots — append-only, one row per agent run (live-marked).
+        snapshots = pl.DataFrame(
+            {
+                "timestamp": pl.Series([], dtype=pl.Datetime),
+                "positions": pl.Series([], dtype=pl.Utf8),
+                "market_value": pl.Series([], dtype=pl.Float64),
+                "cash": pl.Series([], dtype=pl.Float64),
+                "total": pl.Series([], dtype=pl.Float64),
+            }
+        )
+        write_parquet(CONTAINER, "snapshots.parquet", snapshots)
+
         return func.HttpResponse(
             json.dumps({"status": "initialized", "cash": INITIAL_CASH}),
             mimetype="application/json",
@@ -168,6 +180,30 @@ def get_trades(req: func.HttpRequest) -> func.HttpResponse:
         return func.HttpResponse(json.dumps(trades.to_dicts(), default=str), mimetype="application/json", status_code=200)
     except Exception as e:
         logging.error(f"Trades fetch failed: {e}")
+        return func.HttpResponse(json.dumps({"error": str(e)}), status_code=500, mimetype="application/json")
+
+
+# ---- Daily snapshots ----
+
+
+@app.route(route="snapshots", methods=["GET"])
+def get_snapshots(req: func.HttpRequest) -> func.HttpResponse:
+    """Timestamped portfolio+cash snapshots, most recent first. ?limit=N (default 60).
+
+    Each row: {timestamp, positions:[{symbol,shares}], market_value, cash, total}.
+    Backs the frontend "Daily" tab."""
+    try:
+        try:
+            limit = max(1, int(req.params.get("limit", "60")))
+        except ValueError:
+            limit = 60
+        snaps = read_parquet(CONTAINER, "snapshots.parquet")
+        rows = snaps.tail(limit).reverse().to_dicts() if len(snaps) > 0 else []
+        for r in rows:
+            r["positions"] = json.loads(r["positions"]) if r.get("positions") else []
+        return func.HttpResponse(json.dumps(rows, default=str), mimetype="application/json", status_code=200)
+    except Exception as e:
+        logging.error(f"Snapshots fetch failed: {e}")
         return func.HttpResponse(json.dumps({"error": str(e)}), status_code=500, mimetype="application/json")
 
 

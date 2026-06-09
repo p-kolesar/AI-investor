@@ -24,6 +24,7 @@ Source: [`frontend-prod/`](../../frontend-prod/).
 | --- | --- | --- |
 | [Dashboard](../../frontend-prod/src/views/Dashboard.jsx) | `getPortfolio`, `getHistory` | total return vs $100K; outperformance vs SPY over the charted window. |
 | [Positions](../../frontend-prod/src/views/Positions.jsx) | `getPortfolio` + `getPrice` per symbol | **live** market value, unrealized P&L, P&L % — recomputed from live quotes (not the stored `market_value`). |
+| [Daily](../../frontend-prod/src/views/Daily.jsx) | `getSnapshots()` | none — renders the backend's per-run snapshots (date/time split from `timestamp`, holdings from `positions`). `market_value` is already live-marked at snapshot time, so no per-symbol re-quote. Newest-first. |
 | [Agent Log](../../frontend-prod/src/views/AgentLog.jsx) | `getAgentLog(30)` | master/detail timeline + selected memo; per-level token split. Expects runs **newest-first** (as the backend serves them). |
 | [Performance](../../frontend-prod/src/views/Performance.jsx) | `getPortfolio`, `getTrades` + `getPrice` per symbol | win rate + realized P&L from the trade ledger (`realizedFromTrades`); unrealized from live prices. |
 

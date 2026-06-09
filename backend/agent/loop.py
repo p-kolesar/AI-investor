@@ -17,7 +17,7 @@ import anthropic
 import polars as pl
 
 from market.finnhub import FinnhubClient
-from storage.blobs import read_parquet, write_parquet
+from storage.blobs import read_parquet, write_parquet, append_parquet
 from trading import apply_trade
 from agent.prompts import MANDATE, screening_user_prompt, deepdive_user_prompt
 from agent.tools import DEEPDIVE_TOOLS, run_tool
@@ -190,6 +190,39 @@ def _log_run(level1, level2, memo: str) -> None:
     write_parquet(CONTAINER, "agent_log.parquet", pl.concat([log, row], how="diagonal_relaxed"))
 
 
+def _write_snapshot(fc) -> None:
+    """Append a timestamped, live-marked snapshot of the current portfolio + cash.
+
+    Called at the end of every agent run. Positions are re-quoted so market_value
+    reflects live prices (not the last-trade value stored in portfolio.parquet); if
+    a quote is unavailable the stored value is used as a fallback. `positions` is a
+    JSON list of {symbol, shares}. Backs the frontend "Daily" tab (GET /snapshots)."""
+    portfolio = read_parquet(CONTAINER, "portfolio.parquet")
+    cash_ledger = read_parquet(CONTAINER, "cash_ledger.parquet")
+    cash = float(cash_ledger.row(-1, named=True)["amount"]) if len(cash_ledger) > 0 else 0.0
+
+    holdings, market_value = [], 0.0
+    for p in portfolio.to_dicts():
+        try:
+            price = fc.get_quote(p["symbol"]).get("price")
+        except Exception:
+            price = None
+        market_value += price * p["shares"] if price is not None else p["market_value"]
+        holdings.append({"symbol": p["symbol"], "shares": p["shares"]})
+
+    market_value = round(market_value, 2)
+    row = pl.DataFrame(
+        {
+            "timestamp": [datetime.now()],
+            "positions": [json.dumps(holdings)],
+            "market_value": [market_value],
+            "cash": [round(cash, 2)],
+            "total": [round(market_value + cash, 2)],
+        }
+    )
+    append_parquet(CONTAINER, "snapshots.parquet", row)
+
+
 def run_agent() -> dict:
     """Execute one daily agent run. Returns a summary dict."""
     log = read_parquet(CONTAINER, "agent_log.parquet")
@@ -224,11 +257,13 @@ def run_agent() -> dict:
     if l1_in + l1_out >= DAILY_TOKEN_CAP:
         memo = f"BLOCKED: daily token cap reached during screening. {screen.get('rationale', '')}"
         _log_run((l1_in, l1_out), (0, 0), memo)
+        _write_snapshot(fc)
         return {"status": "blocked", "reason": "daily token cap", "scanned": len(watchlist)}
 
     if not selected:
         memo = f"Žiadne symboly nevybrané na deep dive. {screen.get('rationale', '')}"
         _log_run((l1_in, l1_out), (0, 0), memo)
+        _write_snapshot(fc)
         return {"status": "ok", "scanned": len(watchlist), "selected": [], "watchlist_changed": wl_changed}
 
     # Level 2 — deep dive (tool use) on the selected names.
@@ -251,6 +286,7 @@ def run_agent() -> dict:
             skipped.append({"trade": t, "error": str(e)})
 
     _log_run((l1_in, l1_out), (l2_in, l2_out), memo)
+    _write_snapshot(fc)
     return {
         "status": "ok",
         "scanned": len(watchlist),

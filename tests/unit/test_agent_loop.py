@@ -5,8 +5,11 @@ itself (full orchestration over Claude + Finnhub) is left to a future
 integration-style test — see tests/README.md.
 """
 
+import json
+from datetime import date
 from types import SimpleNamespace
 
+import polars as pl
 import pytest
 
 from agent import loop
@@ -14,6 +17,8 @@ from agent.loop import (
     _cost, _extract_json, _memo_after_json, _symbol_of,
     _apply_watchlist_changes, MAX_WATCHLIST,
 )
+
+CONTAINER = "papertrading"
 
 
 # ---- _cost -----------------------------------------------------------------
@@ -101,3 +106,39 @@ def test_add_respects_size_cap(fc):
     full = [f"S{i}" for i in range(MAX_WATCHLIST)]
     wl, changed = _apply_watchlist_changes(fc, full, add=[{"symbol": "NEW"}], remove=[], held=[])
     assert "NEW" not in wl and changed is False
+
+
+# ---- _write_snapshot -------------------------------------------------------
+
+def test_write_snapshot_marks_to_market_and_appends(blob_store, monkeypatch):
+    blob_store.seed(CONTAINER, "portfolio.parquet", pl.DataFrame({
+        "symbol": ["AAPL", "MSFT"], "shares": [10, 5],
+        "avg_cost": [100.0, 200.0], "market_value": [900.0, 900.0]}))  # stale last-trade values
+    blob_store.seed(CONTAINER, "cash_ledger.parquet",
+                    pl.DataFrame({"date": [date.today()], "amount": [5000.0]}))
+    blob_store.patch(monkeypatch, loop)  # overrides the autouse no-op write
+    snap_fc = SimpleNamespace(get_quote=lambda s: {"price": 150.0 if s == "AAPL" else 250.0})
+
+    loop._write_snapshot(snap_fc)
+
+    row = blob_store.read_parquet(CONTAINER, "snapshots.parquet").row(-1, named=True)
+    assert row["market_value"] == 2750.0          # live: 10*150 + 5*250, not the stale 1800
+    assert row["cash"] == 5000.0
+    assert row["total"] == 7750.0
+    assert json.loads(row["positions"]) == [
+        {"symbol": "AAPL", "shares": 10}, {"symbol": "MSFT", "shares": 5}]
+
+
+def test_write_snapshot_falls_back_to_stored_value_when_unpriceable(blob_store, monkeypatch):
+    blob_store.seed(CONTAINER, "portfolio.parquet", pl.DataFrame({
+        "symbol": ["AAPL"], "shares": [10],
+        "avg_cost": [100.0], "market_value": [1234.0]}))
+    blob_store.seed(CONTAINER, "cash_ledger.parquet",
+                    pl.DataFrame({"date": [date.today()], "amount": [0.0]}))
+    blob_store.patch(monkeypatch, loop)
+    snap_fc = SimpleNamespace(get_quote=lambda s: {"price": None})  # Finnhub can't price it
+
+    loop._write_snapshot(snap_fc)
+
+    row = blob_store.read_parquet(CONTAINER, "snapshots.parquet").row(-1, named=True)
+    assert row["market_value"] == 1234.0          # fell back to stored last-trade value

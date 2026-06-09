@@ -91,6 +91,27 @@ disables the agent.
 
 ---
 
+## `snapshots.parquet` — daily portfolio snapshots (append-only)
+
+One row per `run_agent()` execution, written by `_write_snapshot`
+([agent/loop.py](../../../backend/agent/loop.py)) at the end of every run. Backs
+the frontend **Daily** tab via `GET /api/snapshots`.
+
+| Column | Dtype | Meaning |
+| --- | --- | --- |
+| `timestamp` | Datetime | When the snapshot was taken (`datetime.now()` at run end). |
+| `positions` | Utf8 | JSON list of held positions: `[{"symbol","shares"}]`. `[]` when all cash. |
+| `market_value` | Float64 | Sum of positions valued at a **live** quote fetched at snapshot time (falls back to the stored last-trade value if a symbol can't be priced). Rounded 2 dp. |
+| `cash` | Float64 | Free cash balance — last row of `cash_ledger.parquet`. Rounded 2 dp. |
+| `total` | Float64 | `market_value + cash`. Rounded 2 dp. |
+
+> Unlike `portfolio.parquet`, `market_value` here is **live-marked**, so `total`
+> is the true portfolio value at run time. Append-only — never mutate past rows.
+> The spend-cap-disabled early return in `run_agent` does **not** snapshot (the
+> agent never ran); every other path does, so a day can have more than one row.
+
+---
+
 ## `prices_cache.parquet` — Finnhub quote cache (15-min TTL)
 
 One row per symbol (replaced on refresh — the writer filters out the old row,
