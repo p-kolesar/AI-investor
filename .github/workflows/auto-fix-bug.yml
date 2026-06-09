@@ -15,6 +15,7 @@ permissions:
   contents: write        # create branch + push
   pull-requests: write   # open the PR
   issues: write          # comment when the issue is unclear
+  id-token: write        # required by claude-code-action@v1 (OIDC) even with an API key
 
 concurrency:
   group: auto-fix-bug-${{ github.event.issue.number }}
