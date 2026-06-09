@@ -8,58 +8,24 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for the report! The clearer the repro, the more likely it can be fixed automatically.
-
-        Nothing runs on submission — a maintainer adds the **`bug`** label when it's ready to be worked on.
+        Nothing runs on submission — a maintainer adds the **`bug`** label when it's ready.
+        Just describe the problem; the triage agent will ask if it needs more.
   - type: textarea
-    id: summary
+    id: description
     attributes:
-      label: Summary
-      description: What's wrong, in a sentence or two.
-    validations:
-      required: true
-  - type: textarea
-    id: steps
-    attributes:
-      label: Steps to reproduce
-      placeholder: |
-        1. ...
-        2. ...
-        3. ...
-    validations:
-      required: true
-  - type: textarea
-    id: expected
-    attributes:
-      label: Expected behavior
-    validations:
-      required: true
-  - type: textarea
-    id: actual
-    attributes:
-      label: Actual behavior
-      description: Include the exact error message / stack trace if there is one.
+      label: What's wrong?
+      description: What happened, what you expected instead, and how to reproduce it. Paste any error/stack trace.
     validations:
       required: true
   - type: dropdown
     id: area
     attributes:
-      label: Area (best guess)
+      label: Area (optional)
       options:
         - Unsure
-        - Backend — agent (loop / prompts / tools)
-        - Backend — market data (Finnhub)
-        - Backend — trading / storage
-        - Backend — HTTP endpoints
+        - Backend (agent / market data / trading / storage / HTTP)
         - Frontend (dashboard)
         - Infra / CI
         - Docs
-    validations:
-      required: false
-  - type: textarea
-    id: context
-    attributes:
-      label: Anything else
-      description: Links, screenshots, or relevant code as `file.py:line`.
     validations:
       required: false

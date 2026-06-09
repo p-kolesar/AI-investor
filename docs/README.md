@@ -20,14 +20,17 @@ changes. Keep entries short and link out; this page should stay scannable.
 | Add a feature / fix a bug safely | [guides/adding-a-feature.md](guides/adding-a-feature.md) |
 | Run / write the tests | [guides/testing.md](guides/testing.md) → [tests/](../tests/README.md) |
 | Auto-fix a bug from a labeled issue | [guides/automated-bug-fix.md](guides/automated-bug-fix.md) |
+| Build a feature from issue → PR with agents | [guides/feature-workflow.md](guides/feature-workflow.md) |
 | Stand up blue/green competition repos | [guides/competition-setup.md](guides/competition-setup.md) |
 | Know *why* something is the way it is | [decisions/](decisions/) |
+| Browse / add rough ideas (not yet decided) | [ideas.md](ideas.md) |
 
 ## Layout
 
 ```
 docs/
   README.md                 # this map
+  ideas.md                  # backlog of rough ideas, not yet decided
   architecture/             # how the system is built (components + flows)
     overview.md
     backend.md
@@ -46,6 +49,7 @@ docs/
     adding-a-feature.md
     testing.md
     automated-bug-fix.md
+    feature-workflow.md
     competition-setup.md
   decisions/                # Architecture Decision Records (the "why")
     README.md

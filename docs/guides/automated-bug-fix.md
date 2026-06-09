@@ -38,9 +38,11 @@ issue labeled `bug`
 - **The workflow must be on `main`** (the default branch) — issue-triggered
   workflows only run from there.
 - **Issue form:** [`​.github/ISSUE_TEMPLATE/bug_report.yml`](../../.github/ISSUE_TEMPLATE/bug_report.yml)
-  collects repro steps / expected / actual to raise the "clear enough to fix"
-  hit rate. It deliberately does **not** auto-apply `bug` — you add that label
-  when ready, which is the trigger gate.
+  is deliberately light — one required "What's wrong?" box (what happened,
+  expected, repro) plus an optional area. If it's too thin to fix safely the
+  triage agent comments asking for specifics, so the form stays low-friction. It
+  deliberately does **not** auto-apply `bug` — you add that label when ready,
+  which is the trigger gate.
 
 ## Guardrails
 
