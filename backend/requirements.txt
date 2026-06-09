@@ -6,5 +6,3 @@ pyarrow
 requests
 anthropic
 
-# Real-estate scraper (realestate/scraper.py)
-azure-identity  # managed-identity storage path in _blob_service

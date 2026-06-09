@@ -57,7 +57,6 @@ ai-portfolio-manager/
         ├── infra.yml              # Bicep infra
         ├── deploy.yml             # backend Function code
         ├── deploy-frontend-prod.yml
-        ├── daily-agent.yml
         └── deploy-frontend-beta.yml   # PLÁNOVANÉ (s frontend-beta)
 ```
 
@@ -203,8 +202,11 @@ cost = (input_tokens * 3.00 + output_tokens * 15.00) / 1_000_000
 |`infra.yml`               |Push to main (`infra/**`) + manual → Bicep infra             |✅|
 |`deploy.yml`              |Push to main (`backend/**`) + manual → Function App          |✅|
 |`deploy-frontend-prod.yml`|Push to main (`frontend-prod/**`) + manual → Static Web App  |✅|
-|`daily-agent.yml`         |Cron 08:30 UTC Mon-Fri + US holiday check + email pri failure|✅|
 |`deploy-frontend-beta.yml`|Push to main (`frontend-beta/**`) → Static Web Apps beta     |⏳ plánované|
+
+> Denný beh agenta **nie je GitHub workflow** — rieši ho Azure Functions timer
+> trigger (`daily_agent_timer` v `backend/function_app.py`, 07:55 v
+> `WEBSITE_TIME_ZONE`, Po–Pia). Pôvodný `daily-agent.yml` bol odstránený.
 
 -----
 
@@ -214,7 +216,6 @@ cost = (input_tokens * 3.00 + output_tokens * 15.00) / 1_000_000
 - Všetko cez Pull Request (1 approval = ty)
 - GitHub Actions musia prejsť pred merge
 - Účastníci: `Write` access (branches, nie main)
-- `workflow_dispatch` na `daily-agent.yml` len pre owner
 
 ### Participant branch konvencia
 
@@ -361,7 +362,7 @@ Poznámky k stavu:
 - **Routines (Claude Code):** research preview, edukačný talking point na workshope — nie v produkcii
 - **Auth:** frontend je verejná URL, žiadna autentifikácia
 - **Cold start:** Consumption plan má ~2-3s cold start — OK pre demo
-- **US sviatky:** daily-agent.yml obsahuje holiday check pred spustením
+- **Denný beh:** Azure Functions timer trigger (`daily_agent_timer`, 07:55 Po–Pia), nie GitHub cron
 - **Init:** pred prvým agent runom zavolať `GET /setup`
 
 -----
