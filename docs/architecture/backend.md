@@ -38,6 +38,9 @@ prompt (`MANDATE`) is sent with `cache_control: ephemeral` on every call.
 4. EXECUTE trades deterministically: for each, fetch a LIVE quote for the price,
    then apply_trade(). The model never sets the price.
 5. _log_run() → append a row to agent_log.parquet
+6. _write_snapshot() → append a live-marked portfolio+cash row to snapshots.parquet
+   (runs on the blocked / nothing-selected / executed paths — every path past step 1;
+    the step-0 disabled return does not snapshot). Backs the Daily tab.
 ```
 
 ### Guardrails (constants in `loop.py`)

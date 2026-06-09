@@ -60,6 +60,7 @@ All routes are served under `/api`.
 | `/portfolio` | GET | Current positions + cash + total value |
 | `/trade` | POST | Record a BUY/SELL and reconcile positions + cash |
 | `/trades` | GET | Trade ledger (append-only) |
+| `/snapshots` | GET | Daily portfolio+cash snapshots (live-marked, one per agent run). `?limit=N` |
 | `/agent/run` | POST | Trigger one agent run (screening → deep dive → trades + memo) |
 | `/agent/log` | GET | Recent runs (memo, tokens, cost) + cumulative spend. `?limit=N` |
 | `/watchlist` | GET | Current agent-managed watchlist |

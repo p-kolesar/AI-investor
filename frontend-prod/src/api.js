@@ -34,6 +34,12 @@ export async function getWatchlist() {
   return USE_STUBS ? stub.watchlist() : get("/watchlist");
 }
 
+// ---- Daily snapshots: [{timestamp, positions:[{symbol,shares}], market_value, cash, total}]
+// Most recent first. One row per agent run; market_value is live-marked at run time.
+export async function getSnapshots(limit = 60) {
+  return USE_STUBS ? stub.snapshots() : get(`/snapshots?limit=${limit}`);
+}
+
 // ---- Live quote: { symbol, price, open, high, low, cached }
 export async function getPrice(symbol) {
   return USE_STUBS ? stub.price(symbol) : get(`/prices/${symbol}`);
@@ -118,6 +124,35 @@ const stub = {
     watchlist: ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "JPM", "BRK.B", "UNH", "LLY", "XOM", "CAT", "PG", "SPY", "QQQ"],
     count: 14,
   }),
+
+  // Daily snapshots, most recent first (matches GET /snapshots).
+  snapshots: () => [
+    {
+      timestamp: "2026-05-29 07:55:06",
+      positions: [
+        { symbol: "AAPL", shares: 60 }, { symbol: "MSFT", shares: 25 },
+        { symbol: "NVDA", shares: 90 }, { symbol: "LLY", shares: 12 }, { symbol: "JPM", shares: 50 },
+      ],
+      market_value: 55562.0, cash: 44688.0, total: 100250.0,
+    },
+    {
+      timestamp: "2026-05-28 07:55:11",
+      positions: [
+        { symbol: "AAPL", shares: 60 }, { symbol: "MSFT", shares: 25 },
+        { symbol: "NVDA", shares: 90 }, { symbol: "LLY", shares: 12 },
+        { symbol: "JPM", shares: 50 }, { symbol: "XOM", shares: 40 },
+      ],
+      market_value: 56114.0, cash: 39960.0, total: 96074.0,
+    },
+    {
+      timestamp: "2026-05-27 07:55:09",
+      positions: [
+        { symbol: "AAPL", shares: 60 }, { symbol: "MSFT", shares: 25 },
+        { symbol: "NVDA", shares: 90 }, { symbol: "LLY", shares: 12 }, { symbol: "JPM", shares: 50 },
+      ],
+      market_value: 51230.0, cash: 49020.0, total: 100250.0,
+    },
+  ],
 
   price: (symbol) => {
     const price = STUB_QUOTES[symbol] ?? 100 + Math.random() * 50;
