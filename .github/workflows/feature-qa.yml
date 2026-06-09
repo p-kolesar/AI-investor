@@ -96,13 +96,18 @@ jobs:
                   formatting, OR tests added beyond the agreed plan as a FAIL — scope
                   creep (over-testing included) is a defect here, not a nicety.
                c) DOCS. Affected docs under docs/ updated (and `Last verified:` bumped)?
-            5. Post your verdict as a PR REVIEW (not just a comment):
-               - Body MUST be a checklist mapping each acceptance criterion to PASS/FAIL
-                 with concrete evidence (test name, file:line, or pytest result), plus a
-                 line each for the TESTS, SCOPE, and DOCS gates above.
-               - If every criterion AND all three gates pass:
-                   gh pr review ${{ github.event.pull_request.number }} --approve --body "<checklist>"
-                 and add a one-line note that a human should do the final review + merge.
+            5. Post your verdict as a PR review.
+               - The body MUST be a checklist mapping each acceptance criterion to
+                 PASS/FAIL with concrete evidence (test name, file:line, or pytest
+                 result), plus a line each for the TESTS, SCOPE, and DOCS gates above,
+                 and a final VERDICT line.
+               - If every criterion AND all three gates pass, post the verdict as a
+                 COMMENT review and end with "QA APPROVED — a human should do the final
+                 review + merge":
+                   gh pr review ${{ github.event.pull_request.number }} --comment --body "<checklist>"
+                 (Do NOT use --approve: build and QA both run as the same bot, and
+                 GitHub blocks a bot from approving its own bot's PR. The human merge is
+                 Gate #2, so a comment verdict is the intended signal.)
                - If anything fails or is unverifiable:
                    gh pr review ${{ github.event.pull_request.number }} --request-changes --body "<checklist>"
                  and add file/line review comments where useful, then note that a
