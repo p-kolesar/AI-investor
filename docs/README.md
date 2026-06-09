@@ -19,6 +19,7 @@ changes. Keep entries short and link out; this page should stay scannable.
 | Deploy it | [guides/deployment.md](guides/deployment.md) |
 | Add a feature / fix a bug safely | [guides/adding-a-feature.md](guides/adding-a-feature.md) |
 | Run / write the tests | [guides/testing.md](guides/testing.md) → [tests/](../tests/README.md) |
+| Auto-fix a bug from a labeled issue | [guides/automated-bug-fix.md](guides/automated-bug-fix.md) |
 | Know *why* something is the way it is | [decisions/](decisions/) |
 
 ## Layout
@@ -43,6 +44,7 @@ docs/
     deployment.md
     adding-a-feature.md
     testing.md
+    automated-bug-fix.md
   decisions/                # Architecture Decision Records (the "why")
     README.md
     0001-record-architecture-decisions.md

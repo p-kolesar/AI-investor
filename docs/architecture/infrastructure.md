@@ -42,6 +42,7 @@ locate resources.
 | `infra.yml` | push `infra/**`; manual | Create RG (idempotent) → `az deployment group create` Bicep → print func/SWA hostnames to the run summary. | `FINNHUB_API_KEY`, `CLAUDE_API_KEY`; vars `AZURE_LOCATION`, `AZURE_BASE_NAME`. |
 | `deploy.yml` | push `backend/**`; manual | Discover the Function App in the RG → deploy `backend/` (remote build) → smoke-test `GET /api/health` (10× retry). | — |
 | `deploy-frontend-prod.yml` | push `frontend-prod/**`; manual | Discover func host + SWA deploy token → `npm ci && build` with `VITE_API_BASE=https://<func-host>/api` → upload `dist` to the SWA. | — (token fetched at runtime) |
+| `auto-fix-bug.yml` | issue labeled `bug` | Claude Code triages the issue → if clear, branches, fixes, runs pytest, updates tests/docs, opens a PR to main (draft if tests fail); else comments. See [../guides/automated-bug-fix.md](../guides/automated-bug-fix.md). | `CLAUDE_API_KEY` |
 
 > There is **no daily-agent GitHub workflow** — it was obsolete (its cron was
 > disabled to avoid double-running) and has been removed. The daily run is the
