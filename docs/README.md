@@ -18,6 +18,7 @@ changes. Keep entries short and link out; this page should stay scannable.
 | Run it locally | [guides/local-development.md](guides/local-development.md) |
 | Deploy it | [guides/deployment.md](guides/deployment.md) |
 | Add a feature / fix a bug safely | [guides/adding-a-feature.md](guides/adding-a-feature.md) |
+| Run / write the tests | [guides/testing.md](guides/testing.md) → [tests/](../tests/README.md) |
 | Know *why* something is the way it is | [decisions/](decisions/) |
 
 ## Layout
@@ -41,10 +42,15 @@ docs/
     local-development.md
     deployment.md
     adding-a-feature.md
+    testing.md
   decisions/                # Architecture Decision Records (the "why")
     README.md
     0001-record-architecture-decisions.md
 ```
+
+> The test suite itself lives at the repo root in [`tests/`](../tests/README.md)
+> (with `pytest.ini`), alongside the code it covers — `docs/guides/testing.md` is
+> the pointer to it.
 
 ## Conventions
 
