@@ -28,13 +28,16 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Create resource group (idempotent)
+      - name: Ensure resource group exists
         uses: azure/cli@v2
         with:
           inlineScript: |
-            az group create \
-              --name "$AZURE_RESOURCE_GROUP" \
-              --location "$AZURE_LOCATION"
+            # The RG may be pre-created by an admin, with the deploying service
+            # principal scoped to just that RG (no subscription-level rights to
+            # create RGs). Try to create it; if that's not permitted, assume it
+            # already exists and let the RG-scoped deployment proceed.
+            az group create --name "$AZURE_RESOURCE_GROUP" --location "$AZURE_LOCATION" \
+              || echo "Could not create '$AZURE_RESOURCE_GROUP' (RG-scoped SP?) — assuming it already exists."
 
       - name: Deploy Bicep
         uses: azure/cli@v2
