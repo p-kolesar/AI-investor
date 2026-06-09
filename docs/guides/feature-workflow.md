@@ -239,3 +239,24 @@ the action and secret:
   large cross-area feature is still better split into separate issues.
 - Cost scales with feature/codebase size and turns; Sonnet keeps it cheap, bump
   `--model` per stage for harder work.
+
+## Troubleshooting (lessons from the first live run)
+
+- **QA fails: `Workflow initiated by non-human actor: claude (type: Bot)`.**
+  The build agent opens the PR as `claude[bot]`, so the QA trigger's actor is a
+  bot, and `claude-code-action` blocks bot-initiated events by default. Fixed by
+  `allowed_bots: "claude"` on the QA action — already set. (Only QA needs it; the
+  other stages are triggered by labels a human applies.)
+- **QA fails: `401 … workflow file must … have identical content to the version
+  on the default branch`.** The Claude app refuses to issue a token unless the
+  *running* QA workflow file is byte-identical to the copy on `main`, and
+  `pull_request` runs use the PR **branch's** copy. So **don't edit the workflow
+  files while a feature PR is open** — the open PR's branch falls behind `main` and
+  QA can't validate. If it happens: rebase the PR branch onto `main` (and
+  force-push) so the files match, or just close the PR and run a fresh feature
+  (its branch is born from current `main`). In normal use this never triggers,
+  because build branches are created from `main` after the workflows are stable.
+- **QA can't `--approve` — "bot cannot approve its own PR".** Build and QA run as
+  the same `claude[bot]`, and GitHub blocks self-approval. By design QA posts its
+  verdict as a `--comment` review; **the human merge is Gate #2**, so no formal
+  bot approval is needed or wanted.
