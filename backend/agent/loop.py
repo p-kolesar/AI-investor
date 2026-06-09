@@ -3,7 +3,7 @@
 Level 1 (screening): the loop pre-fetches quote + analyst recommendation for the
 whole watchlist (cheap Finnhub calls, ~no model tokens) and Claude ranks them in a
 single call -> picks 2-3 to deep-dive and may add/remove watchlist symbols.
-Level 2 (deep dive, tool use, max_tokens 2048): full signals -> trades + memo.
+Level 2 (deep dive, tool use, max_tokens 4096): full signals -> trades + memo.
 
 Guardrails: daily token budget (8000) blocks the deep dive; cumulative spend cap
 ($5) disables the agent. The watchlist is agent-managed (size-capped)."""

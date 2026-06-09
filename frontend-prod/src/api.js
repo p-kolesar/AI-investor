@@ -1,8 +1,9 @@
 // Single seam between the UI and the backend. Every view calls these functions
 // and nothing else. Each returns the exact shape the Function App serves
 // (see backend/function_app.py). When VITE_API_BASE is unset the app runs on
-// stub/demo data so it works with no backend; set VITE_API_BASE=/api in
-// production (Azure Static Web Apps linked backend) to hit the real API.
+// stub/demo data so it works with no backend. In production the deploy workflow
+// builds with VITE_API_BASE=https://<func-host>/api (cross-origin; the Function
+// App's CORS allows the Static Web App origin) to hit the real API.
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
 const USE_STUBS = !API_BASE;

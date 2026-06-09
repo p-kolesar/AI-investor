@@ -24,13 +24,12 @@ for the full design (Slovak).
   infra.yml                 # provisions/updates Azure infra (infra/** + manual)
   deploy.yml                # deploys the Python function code (backend/** + manual)
   deploy-frontend-prod.yml  # builds + deploys frontend-prod to its Static Web App
-  daily-agent.yml           # cron 08:30 UTC Mon-Fri — triggers an agent run (holiday-aware)
 infra/
   main.bicep                # Storage, Log Analytics + App Insights, Flex Consumption
                             # Function App (+ CORS), Free Static Web App (prod)
   main.parameters.json      # baseName / environmentName / pythonVersion
 backend/
-  function_app.py           # Python v2 HTTP endpoints (see below)
+  function_app.py           # Python v2 HTTP endpoints (see below) + daily timer trigger
   agent/                    # loop.py (2-level agent), tools.py, prompts.py
   market/finnhub.py         # Finnhub wrapper: rate limit, daily cap, 15-min cache
   storage/blobs.py          # Parquet <-> Azure Blob helpers
@@ -111,9 +110,11 @@ az ad sp create-for-rbac \
    deploy token at run time — no extra secrets.)
 
 After the first run, pushes to `main` trigger each pipeline by changed path
-(`infra/**`, `backend/**`, `frontend-prod/**`). The **Daily Agent** workflow runs
-on a cron (08:30 UTC, Mon–Fri, skipping NYSE holidays) and emails the owner on
-failure — including when a cost guardrail (spend/token cap) halts the agent.
+(`infra/**`, `backend/**`, `frontend-prod/**`). The **daily agent run is an Azure
+Functions timer trigger** (`daily_agent_timer` in `backend/function_app.py`) that
+fires at 07:55 (in the app's `WEBSITE_TIME_ZONE`; set it to a CET zone, else UTC),
+Mon–Fri. Failures surface in Function App / Application Insights logs; cost
+guardrails (spend/token cap) are recorded in the run result and the agent log.
 
 ## Cost guardrails
 
@@ -162,7 +163,7 @@ VITE_API_PROXY=http://localhost:7071
 | Backend (agent, endpoints, storage) | ✅ done |
 | Infra (Function App + prod SWA + CORS) | ✅ done |
 | `frontend-prod` (4-tab dashboard) | ✅ done & deployed |
-| Daily agent workflow | ✅ operational |
+| Daily agent (Functions timer trigger) | ✅ operational |
 | `frontend-beta` (workshop bug-hunt copy) | ⏳ planned |
 | Dashboard charts on real data | ⏳ uses demo series until a `/history` endpoint exists |
 
