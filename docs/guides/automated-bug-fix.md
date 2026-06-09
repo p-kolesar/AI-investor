@@ -25,7 +25,18 @@ issue labeled `bug`
 - **Secret:** uses the existing `CLAUDE_API_KEY` Actions secret (an Anthropic
   `sk-ant-…` key). No new secret needed — the action's `anthropic_api_key` input
   is wired to it.
+- **Install the Claude GitHub App** on the repo: <https://github.com/apps/claude>.
+  The action exchanges its OIDC token for a GitHub token *via this app* — without
+  it you get `401 … Claude Code is not installed on this repository`.
+- **Repo Actions setting:** Settings → Actions → General → Workflow permissions →
+  tick **“Allow GitHub Actions to create and approve pull requests.”** Otherwise
+  `gh pr create` is blocked.
+- **`id-token: write`** is already in the workflow's `permissions:` — the action
+  needs it for OIDC even though we authenticate with an API key. (Symptom if
+  missing: `Unable to get ACTIONS_ID_TOKEN_REQUEST_URL`.)
 - **Label:** ensure a `bug` label exists in the repo.
+- **The workflow must be on `main`** (the default branch) — issue-triggered
+  workflows only run from there.
 - **Issue form:** [`​.github/ISSUE_TEMPLATE/bug_report.yml`](../../.github/ISSUE_TEMPLATE/bug_report.yml)
   collects repro steps / expected / actual to raise the "clear enough to fix"
   hit rate. It deliberately does **not** auto-apply `bug` — you add that label
