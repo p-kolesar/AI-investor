@@ -1,0 +1,40 @@
+name: Feature request
+description: Propose a new feature. A maintainer adds the `new-feature` label to start the agent workflow.
+title: "[Feature]: "
+# Intentionally NO auto-label: a maintainer adds `new-feature` manually, which is
+# the trigger gate for .github/workflows/feature-spec-review.yml.
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Nothing runs on submission — a maintainer adds the **`new-feature`** label when it's ready.
+        Just describe what you want; the spec-review agent sharpens the rest and tags the area(s).
+  - type: textarea
+    id: description
+    attributes:
+      label: What do you want, and why?
+      description: The goal and the problem it solves. Keep it short — detail per area below if you have it.
+    validations:
+      required: true
+  - type: textarea
+    id: req-backend
+    attributes:
+      label: Backend requirements (optional)
+      description: Agent loop / market data / trading / storage / HTTP endpoints. Leave blank if none.
+    validations:
+      required: false
+  - type: textarea
+    id: req-frontend
+    attributes:
+      label: Frontend requirements (optional)
+      description: Dashboard / SPA behaviour. Leave blank if none.
+    validations:
+      required: false
+  - type: textarea
+    id: req-infra
+    attributes:
+      label: Infra requirements (optional)
+      description: CI, deployment, Azure config. Leave blank if none.
+    validations:
+      required: false
