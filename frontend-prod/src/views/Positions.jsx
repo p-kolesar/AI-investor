@@ -55,7 +55,7 @@ export default function Positions() {
               <td className={`mono ${signClass(r.pnlPct)}`}>{pct(r.pnlPct)}</td>
             </tr>
           ))}
-          <tr key="__cash__">
+          <tr key="__cash__" className="cash-row">
             <td>Cash</td>
             <td />
             <td />
