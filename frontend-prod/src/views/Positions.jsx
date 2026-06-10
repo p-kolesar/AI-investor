@@ -7,15 +7,16 @@ import { usd, pct, num, signClass } from "../components/format.js";
 // P&L% are computed client-side from the live price (the backend's stored
 // market_value is the last-trade value, not live).
 async function loadPositions() {
-  const { positions } = await getPortfolio();
+  const { positions, cash } = await getPortfolio();
   const quotes = await Promise.all(positions.map((p) => getPrice(p.symbol)));
-  return positions.map((p, i) => {
+  const enriched = positions.map((p, i) => {
     const price = quotes[i].price;
     const marketValue = price * p.shares;
     const unrealized = (price - p.avg_cost) * p.shares;
     const pnlPct = price / p.avg_cost - 1;
     return { ...p, price, marketValue, unrealized, pnlPct };
   });
+  return { positions: enriched, cash };
 }
 
 export default function Positions() {
@@ -23,7 +24,9 @@ export default function Positions() {
 
   if (loading) return <Loading label="Loading positions & live prices…" />;
   if (error) return <ErrorState error={error} />;
-  if (!data.length) return <Empty label="No open positions." />;
+  if (!data.positions.length) return <Empty label="No open positions." />;
+
+  const { positions, cash } = data;
 
   return (
     <div className="panel">
@@ -41,7 +44,7 @@ export default function Positions() {
           </tr>
         </thead>
         <tbody>
-          {data.map((r) => (
+          {positions.map((r) => (
             <tr key={r.symbol}>
               <td>{r.symbol}</td>
               <td className="mono">{num(r.shares)}</td>
@@ -52,12 +55,22 @@ export default function Positions() {
               <td className={`mono ${signClass(r.pnlPct)}`}>{pct(r.pnlPct)}</td>
             </tr>
           ))}
+          <tr key="__cash__">
+            <td>Cash</td>
+            <td />
+            <td />
+            <td />
+            <td className="mono">{usd(cash)}</td>
+            <td />
+            <td />
+          </tr>
         </tbody>
         <tfoot>
           {(() => {
-            const totalMarketValue = data.reduce((s, r) => s + r.marketValue, 0);
-            const totalUnrealized = data.reduce((s, r) => s + r.unrealized, 0);
-            const totalCost = data.reduce((s, r) => s + r.avg_cost * r.shares, 0);
+            const equityValue = positions.reduce((s, r) => s + r.marketValue, 0);
+            const totalMarketValue = equityValue + cash;
+            const totalUnrealized = positions.reduce((s, r) => s + r.unrealized, 0);
+            const totalCost = positions.reduce((s, r) => s + r.avg_cost * r.shares, 0);
             const totalPnlPct = totalCost ? totalUnrealized / totalCost : null;
             return (
               <tr>
