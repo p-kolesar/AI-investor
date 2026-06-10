@@ -1,6 +1,6 @@
 # Backend
 
-Status: **current** · Last verified: 2026-06-09
+Status: **current** · Last verified: 2026-06-10
 
 Python v2 Azure Function App (Flex Consumption). Source: [`backend/`](../../backend/).
 The HTTP endpoint table lives in the root [README](../../README.md#backend-endpoints);
@@ -31,7 +31,7 @@ prompt (`MANDATE`) is sent with `cache_control: ephemeral` on every call.
    • Claude ranks them → JSON {selected, add, remove, rationale}
    • keep selected ∩ watchlist; apply watchlist add/remove (validate adds via live quote,
      cap 30, never remove a held symbol)
-   • if level-1 tokens ≥ 15,000  → return {status: blocked}   (runaway guard)
+   • if level-1 tokens ≥ 20,000  → return {status: blocked}   (runaway guard)
    • if nothing selected          → return {status: ok, selected: []}
 3. LEVEL 2 — DEEP DIVE (tool-use conversation, ≤ 5 rounds)
    • Claude calls Finnhub tools for the 2–3 selected names → JSON trades block + prose memo
@@ -48,7 +48,7 @@ prompt (`MANDATE`) is sent with `cache_control: ephemeral` on every call.
 | Guard | Value | Effect |
 | --- | --- | --- |
 | `SPEND_CAP_USD` | $5.00 | Cumulative `estimated_cost_usd` ≥ cap → agent **disables** itself (no calls). |
-| `DAILY_TOKEN_CAP` | 15,000 | If screening alone exceeds it, the deep dive is **blocked** for the day. |
+| `DAILY_TOKEN_CAP` | 20,000 | If screening alone exceeds it, the deep dive is **blocked** for the day. |
 | `SCREENING_MAX_TOKENS` | 1,024 | `max_tokens` for the level-1 call. |
 | `DEEPDIVE_MAX_TOKENS` | 4,096 | `max_tokens` per level-2 round. |
 | `MAX_TOOL_ROUNDS` | 5 | Hard stop on the tool-use conversation. |

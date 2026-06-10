@@ -15,7 +15,7 @@ Layered, self-enforcing caps:
 
 **Claude** ([`agent/loop.py`](../../backend/agent/loop.py)) —
 - per-call `max_tokens` (screening 1024 / deep dive 4096),
-- `DAILY_TOKEN_CAP = 15,000` blocks the deep dive if screening alone exceeds it,
+- `DAILY_TOKEN_CAP = 20,000` blocks the deep dive if screening alone exceeds it,
 - `SPEND_CAP_USD = 5.00` on cumulative `estimated_cost_usd` (summed from
   `agent_log`) **disables the agent entirely**,
 - `MAX_TOOL_ROUNDS = 5` bounds the tool-use conversation.
