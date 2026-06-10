@@ -28,7 +28,7 @@ SCREENING_MAX_TOKENS = 1024
 DEEPDIVE_MAX_TOKENS = 4096
 # Screening-runaway guard (blocks the deep dive if screening alone exceeds it).
 # Sized for the full-watchlist scan; the real cost backstop is SPEND_CAP_USD.
-DAILY_TOKEN_CAP = 15000
+DAILY_TOKEN_CAP = 20000
 SPEND_CAP_USD = 5.0
 INPUT_COST_PER_1M = 3.00
 OUTPUT_COST_PER_1M = 15.00
