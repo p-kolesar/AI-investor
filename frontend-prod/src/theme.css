@@ -94,6 +94,7 @@ th { color: var(--text-dim); font-weight: 600; font-size: 12px; text-transform: 
 tbody tr:hover { background: var(--bg-elev-2); }
 td.pos { color: var(--pos); }
 td.neg { color: var(--neg); }
+tr.cash-row td { color: var(--accent); }
 .mono { font-variant-numeric: tabular-nums; }
 
 /* ---- States ---- */
