@@ -127,7 +127,7 @@ guardrails (spend/token cap) are recorded in the run result and the agent log.
 ## Cost guardrails
 
 - **Claude:** per-call max tokens (screening 1024 / deep dive 4096), daily token
-  cap (20K, runaway guard), cumulative spend cap ($5 → agent disables itself).
+  cap (20K, runaway guard), cumulative spend cap ($10 → agent disables itself).
 - **Finnhub:** ~42 calls/min throttle, 200 calls/day hard cap, 15-min quote cache.
 - **Azure:** Flex Consumption; set a cost alert/budget on the subscription.
 

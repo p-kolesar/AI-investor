@@ -15,7 +15,7 @@ import pytest
 from agent import loop
 from agent.loop import (
     _cost, _extract_json, _memo_after_json, _symbol_of,
-    _apply_watchlist_changes, MAX_WATCHLIST,
+    _apply_watchlist_changes, _compute_performance, _record_benchmark, MAX_WATCHLIST,
 )
 
 CONTAINER = "papertrading"
@@ -142,6 +142,68 @@ def test_write_snapshot_falls_back_to_stored_value_when_unpriceable(blob_store, 
 
     row = blob_store.read_parquet(CONTAINER, "snapshots.parquet").row(-1, named=True)
     assert row["market_value"] == 1234.0          # fell back to stored last-trade value
+
+
+# ---- _record_benchmark -----------------------------------------------------
+
+def test_record_benchmark_upserts_one_row_per_day(blob_store, monkeypatch):
+    blob_store.patch(monkeypatch, loop)
+    _record_benchmark(SimpleNamespace(get_quote=lambda s: {"price": 500.0}))
+    _record_benchmark(SimpleNamespace(get_quote=lambda s: {"price": 510.0}))  # same day
+
+    bench = blob_store.read_parquet(CONTAINER, "benchmark.parquet")
+    assert bench.height == 1                      # upsert, not append
+    assert bench.row(-1, named=True)["close"] == 510.0
+
+
+def test_record_benchmark_noop_when_spy_unpriceable(blob_store, monkeypatch):
+    blob_store.patch(monkeypatch, loop)
+    _record_benchmark(SimpleNamespace(get_quote=lambda s: {"price": None}))
+    with pytest.raises(Exception):                # never created
+        blob_store.read_parquet(CONTAINER, "benchmark.parquet")
+
+
+# ---- _compute_performance --------------------------------------------------
+
+def test_compute_performance_alpha_and_position_pnl(blob_store, monkeypatch):
+    blob_store.seed(CONTAINER, "portfolio.parquet", pl.DataFrame({
+        "symbol": ["AAPL", "MSFT"], "shares": [100, 50],
+        "avg_cost": [120.0, 200.0], "market_value": [12000.0, 10000.0]}))
+    blob_store.seed(CONTAINER, "cash_ledger.parquet", pl.DataFrame({
+        "date": [date.today(), date.today()], "amount": [100_000.0, 78_000.0]}))  # row0 = inception
+    blob_store.seed(CONTAINER, "benchmark.parquet",
+                    pl.DataFrame({"date": [date.today()], "close": [500.0]}))  # SPY baseline
+    blob_store.patch(monkeypatch, loop)
+    prices = {"AAPL": 132.0, "MSFT": 180.0, "SPY": 505.0}
+    fc = SimpleNamespace(get_quote=lambda s: {"price": prices[s]})
+
+    perf = _compute_performance(fc)
+
+    # total = 100*132 + 50*180 + 78000 cash = 100200 → +0.20% on 100k inception
+    assert perf["total"] == 100_200.0
+    assert perf["portfolio_return_pct"] == 0.2
+    assert perf["spy_return_pct"] == 1.0          # 505/500 - 1
+    assert perf["alpha_pct"] == -0.8              # 0.2 - 1.0
+    aapl = next(p for p in perf["positions"] if p["symbol"] == "AAPL")
+    msft = next(p for p in perf["positions"] if p["symbol"] == "MSFT")
+    assert aapl["pnl"] == 1200.0 and aapl["pnl_pct"] == 10.0
+    assert msft["pnl"] == -1000.0 and msft["pnl_pct"] == -10.0
+
+
+def test_compute_performance_null_spy_when_no_baseline(blob_store, monkeypatch):
+    blob_store.seed(CONTAINER, "portfolio.parquet", pl.DataFrame(
+        schema={"symbol": pl.Utf8, "shares": pl.Int64,
+                "avg_cost": pl.Float64, "market_value": pl.Float64}))
+    blob_store.seed(CONTAINER, "cash_ledger.parquet",
+                    pl.DataFrame({"date": [date.today()], "amount": [100_000.0]}))
+    blob_store.patch(monkeypatch, loop)  # no benchmark.parquet seeded
+    fc = SimpleNamespace(get_quote=lambda s: {"price": 505.0})
+
+    perf = _compute_performance(fc)
+
+    assert perf["portfolio_return_pct"] == 0.0    # all cash, flat
+    assert perf["spy_return_pct"] is None         # no baseline → never guessed
+    assert perf["alpha_pct"] is None
 
 
 def test_snapshot_portfolio_writes_without_agent(blob_store, monkeypatch):

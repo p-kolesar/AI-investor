@@ -29,7 +29,7 @@ DEEPDIVE_MAX_TOKENS = 4096
 # Screening-runaway guard (blocks the deep dive if screening alone exceeds it).
 # Sized for the full-watchlist scan; the real cost backstop is SPEND_CAP_USD.
 DAILY_TOKEN_CAP = 20000
-SPEND_CAP_USD = 5.0
+SPEND_CAP_USD = 10.0
 INPUT_COST_PER_1M = 3.00
 OUTPUT_COST_PER_1M = 15.00
 MAX_TOOL_ROUNDS = 5
@@ -190,6 +190,86 @@ def _log_run(level1, level2, memo: str) -> None:
     write_parquet(CONTAINER, "agent_log.parquet", pl.concat([log, row], how="diagonal_relaxed"))
 
 
+def _record_benchmark(fc) -> None:
+    """Capture the current SPY price as today's benchmark close (upsert per day).
+
+    SPY history is not backfillable (Finnhub's free tier blocks historical
+    candles), so the series is built forward from /setup: the first row is the
+    inception baseline against which alpha is measured. No-op if SPY is unpriceable."""
+    try:
+        price = fc.get_quote("SPY").get("price")
+    except Exception:
+        price = None
+    if price is None:
+        return
+    today = datetime.now().date()
+    try:
+        bench = read_parquet(CONTAINER, "benchmark.parquet")
+    except Exception:
+        bench = pl.DataFrame(schema={"date": pl.Date, "close": pl.Float64})
+    bench = bench.filter(pl.col("date") != today)  # upsert: one row per day
+    bench = pl.concat(
+        [bench, pl.DataFrame({"date": [today], "close": [float(price)]})], how="diagonal_relaxed"
+    )
+    write_parquet(CONTAINER, "benchmark.parquet", bench)
+
+
+def _compute_performance(fc) -> dict:
+    """Portfolio-vs-SPY feedback for the agent: return since inception, per-position
+    P&L, and alpha vs SPY when benchmark history exists.
+
+    Live-marked from current quotes. Inception capital is the first cash_ledger row
+    ($100k at /setup); the SPY baseline is the first benchmark row. SPY figures are
+    None until a baseline exists — the agent is told never to guess them."""
+    portfolio = read_parquet(CONTAINER, "portfolio.parquet")
+    cash_ledger = read_parquet(CONTAINER, "cash_ledger.parquet")
+    cash = float(cash_ledger.row(-1, named=True)["amount"]) if len(cash_ledger) > 0 else 0.0
+    inception = float(cash_ledger.row(0, named=True)["amount"]) if len(cash_ledger) > 0 else 0.0
+
+    positions, market_value = [], 0.0
+    for p in portfolio.to_dicts():
+        try:
+            price = fc.get_quote(p["symbol"]).get("price")
+        except Exception:
+            price = None
+        if price is None:  # fall back to last-trade value, like _write_snapshot
+            price = p["market_value"] / p["shares"] if p["shares"] else 0.0
+        market_value += price * p["shares"]
+        avg = p["avg_cost"]
+        positions.append({
+            "symbol": p["symbol"], "shares": p["shares"],
+            "avg_cost": round(avg, 2), "price": round(price, 2),
+            "pnl": round((price - avg) * p["shares"], 2),
+            "pnl_pct": round((price / avg - 1) * 100, 2) if avg else None,
+        })
+
+    total = market_value + cash
+    port_return = (total / inception - 1) * 100 if inception else None
+
+    try:
+        spy_price = fc.get_quote("SPY").get("price")
+    except Exception:
+        spy_price = None
+    try:
+        bench = read_parquet(CONTAINER, "benchmark.parquet").sort("date")
+    except Exception:
+        bench = pl.DataFrame(schema={"date": pl.Date, "close": pl.Float64})
+    spy_base = float(bench.row(0, named=True)["close"]) if len(bench) > 0 else None
+    spy_return = (spy_price / spy_base - 1) * 100 if (spy_price and spy_base) else None
+    alpha = (port_return - spy_return) if (port_return is not None and spy_return is not None) else None
+
+    return {
+        "total": round(total, 2),
+        "cash": round(cash, 2),
+        "inception_capital": round(inception, 2),
+        "portfolio_return_pct": round(port_return, 2) if port_return is not None else None,
+        "spy_return_pct": round(spy_return, 2) if spy_return is not None else None,
+        "alpha_pct": round(alpha, 2) if alpha is not None else None,
+        "benchmark_days": len(bench),
+        "positions": positions,
+    }
+
+
 def _write_snapshot(fc) -> dict:
     """Append a timestamped, live-marked snapshot of the current portfolio + cash.
 
@@ -198,6 +278,7 @@ def _write_snapshot(fc) -> dict:
     portfolio.parquet); if a quote is unavailable the stored value is used as a
     fallback. `positions` is a JSON list of {symbol, shares}. Returns the written
     snapshot. Backs the frontend "Daily" tab (GET /snapshots)."""
+    _record_benchmark(fc)  # capture today's SPY close alongside the snapshot
     portfolio = read_parquet(CONTAINER, "portfolio.parquet")
     cash_ledger = read_parquet(CONTAINER, "cash_ledger.parquet")
     cash = float(cash_ledger.row(-1, named=True)["amount"]) if len(cash_ledger) > 0 else 0.0
@@ -251,10 +332,13 @@ def run_agent() -> dict:
     cash_ledger = read_parquet(CONTAINER, "cash_ledger.parquet")
     cash = float(cash_ledger.row(-1, named=True)["amount"]) if len(cash_ledger) > 0 else 0.0
 
-    # Level 1 — pre-fetch the universe, then one ranking call.
+    # Level 1 — pre-fetch the universe, then one ranking call. The previous memo
+    # is fed back so the agent keeps strategic continuity and honours carry-over
+    # candidates it flagged for future entry.
+    prior_memo = log.row(-1, named=True)["memo"] if len(log) > 0 else ""
     rows = _prefetch_screen_data(fc, watchlist)
     screen_text, l1_in, l1_out = _complete(
-        client, MANDATE, screening_user_prompt(rows, positions), SCREENING_MAX_TOKENS
+        client, MANDATE, screening_user_prompt(rows, positions, prior_memo), SCREENING_MAX_TOKENS
     )
     screen = _extract_json(screen_text) or {}
     selected = [s.upper() for s in screen.get("selected", []) if s.upper() in watchlist]
@@ -275,9 +359,13 @@ def run_agent() -> dict:
         _write_snapshot(fc)
         return {"status": "ok", "scanned": len(watchlist), "selected": [], "watchlist_changed": wl_changed}
 
-    # Level 2 — deep dive (tool use) on the selected names.
+    # Level 2 — deep dive (tool use) on the selected names. The performance
+    # feedback (portfolio vs SPY, per-position P&L) is injected so every memo can
+    # open with its alpha — the primary success metric.
+    performance = _compute_performance(fc)
     dive_text, l2_in, l2_out = _converse(
-        client, fc, MANDATE, deepdive_user_prompt(selected, positions, cash), DEEPDIVE_TOOLS, DEEPDIVE_MAX_TOKENS
+        client, fc, MANDATE, deepdive_user_prompt(selected, positions, cash, performance),
+        DEEPDIVE_TOOLS, DEEPDIVE_MAX_TOKENS,
     )
     decision = _extract_json(dive_text) or {}
     trades = decision.get("trades", [])
