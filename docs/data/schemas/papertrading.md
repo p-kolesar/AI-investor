@@ -1,6 +1,6 @@
 # `papertrading` container — schemas
 
-Status: **current** · Last verified: 2026-06-09
+Status: **current** · Last verified: 2026-06-12
 
 All blobs are Parquet written by Polars. Column dtypes below are the **Polars
 dtypes set by [`/setup`](../../../backend/function_app.py)**; preserve them.
@@ -86,7 +86,7 @@ One row per `run_agent()` execution.
 | `memo` | Utf8 | The agent's prose memo (Slovak), or a `BLOCKED:` / status note. |
 
 Served by `GET /api/agent/log` (returns recent runs + `cumulative_cost_usd =
-sum(estimated_cost_usd)`). The cumulative sum drives the **$5 spend cap** that
+sum(estimated_cost_usd)`). The cumulative sum drives the **$10 spend cap** that
 disables the agent.
 
 ---
@@ -153,13 +153,18 @@ counter is the durable daily cap.
 
 ---
 
-## `benchmark.parquet` — SPY daily close (stub)
+## `benchmark.parquet` — SPY daily close (forward-built)
 
 | Column | Dtype | Meaning |
 | --- | --- | --- |
-| `date` | Date | Trading day. |
-| `close` | Float64 | SPY close. |
+| `date` | Date | Trading day (upsert — one row per day). |
+| `close` | Float64 | SPY price captured at snapshot time (live quote, used as the day's close). |
 
-Created empty by `/setup`. **Currently unused / not populated** — reserved for
-the planned `/history` endpoint that will back the portfolio-vs-SPY chart and
-Sharpe/drawdown (those are stubbed in the frontend today).
+Created empty by `/setup`, then **populated forward** by `_record_benchmark`
+([agent/loop.py](../../../backend/agent/loop.py)), called from `_write_snapshot`
+on every agent run / on-demand snapshot. **The first row is the inception
+baseline** against which the agent's alpha is measured. History is *not*
+backfillable — Finnhub's free tier blocks historical candles (`/stock/candle`
+returns 403) — so a `/setup` reset restarts the SPY series from that day. Read by
+`_compute_performance`, which feeds portfolio-vs-SPY alpha + per-position P&L into
+the deep-dive prompt so each memo opens with its performance.

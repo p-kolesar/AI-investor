@@ -100,7 +100,7 @@ Function App + SWA hostnames.
   OIDC federated credentials are the modern alternative if you'd rather not store
   a long-lived secret — more setup, no secret to rotate.
 - Set an Azure **budget per RG** for hard cost caps; the app's own guardrails
-  ($5 Claude spend cap, 200 Finnhub calls/day) apply per deployment, so each team
+  ($10 Claude spend cap, 200 Finnhub calls/day) apply per deployment, so each team
   is independently bounded.
 - Delete `blue-sp.json` / `green-sp.json` after uploading them — they contain
   credentials.

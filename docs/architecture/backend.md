@@ -24,7 +24,7 @@ this doc covers how the pieces fit together.
 prompt (`MANDATE`) is sent with `cache_control: ephemeral` on every call.
 
 ```
-0. Read agent_log → if cumulative estimated_cost_usd ≥ $5  → return {status: disabled}
+0. Read agent_log → if cumulative estimated_cost_usd ≥ $10 → return {status: disabled}
 1. Load watchlist, portfolio (positions + held symbols), current cash
 2. LEVEL 1 — SCREENING (one model call, no tools)
    • prefetch quote + analyst recommendation for EVERY watchlist symbol (Finnhub, cheap)
@@ -47,7 +47,7 @@ prompt (`MANDATE`) is sent with `cache_control: ephemeral` on every call.
 
 | Guard | Value | Effect |
 | --- | --- | --- |
-| `SPEND_CAP_USD` | $5.00 | Cumulative `estimated_cost_usd` ≥ cap → agent **disables** itself (no calls). |
+| `SPEND_CAP_USD` | $10.00 | Cumulative `estimated_cost_usd` ≥ cap → agent **disables** itself (no calls). |
 | `DAILY_TOKEN_CAP` | 20,000 | If screening alone exceeds it, the deep dive is **blocked** for the day. |
 | `SCREENING_MAX_TOKENS` | 1,024 | `max_tokens` for the level-1 call. |
 | `DEEPDIVE_MAX_TOKENS` | 4,096 | `max_tokens` per level-2 round. |
