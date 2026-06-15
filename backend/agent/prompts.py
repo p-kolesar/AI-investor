@@ -29,6 +29,7 @@ Dáta si vyžiadaš cez dostupné nástroje (tools). Nehádaj čísla — vždy
 si over aktuálne dáta cez nástroje. Ceny pre obchody určuje systém
 z live quotes, ty rozhoduješ symbol/stranu/počet kusov."""
 
+# test
 
 def screening_user_prompt(rows: list[dict], positions: list[dict], prior_memo: str = "") -> str:
     lines = []
