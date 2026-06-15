@@ -36,3 +36,5 @@ def run_tool(fc, name: str, tool_input: dict):
     if method is None:
         return {"error": f"unknown tool {name}"}
     return method(symbol)
+
+#test2
