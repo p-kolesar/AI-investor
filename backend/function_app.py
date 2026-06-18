@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from datetime import datetime
 
 import anthropic
@@ -364,7 +365,7 @@ TRADING MANDATE
 - Minimum 10% cash floor at all times
 - Entries and exits driven by the agent's daily screening and deep-dive analysis"""
 
-        client = anthropic.Anthropic()
+        client = anthropic.Anthropic(api_key=os.getenv("CLAUDE_API_KEY"))
         response = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=1024,

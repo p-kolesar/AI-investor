@@ -1,6 +1,6 @@
 # Frontend
 
-Status: **current** · Last verified: 2026-06-09
+Status: **current** · Last verified: 2026-06-18
 
 React + Vite SPA, dark mode, deployed to Azure Static Web Apps (Free).
 Source: [`frontend-prod/`](../../frontend-prod/).
@@ -13,7 +13,8 @@ Source: [`frontend-prod/`](../../frontend-prod/).
 - **Single backend seam** — [`src/api.js`](../../frontend-prod/src/api.js) is the
   *only* module that talks to the API. Every view imports from it and nothing
   else. When `VITE_API_BASE` is unset it serves **stub data** with shapes that
-  match the real endpoints 1:1, so the SPA runs with no backend.
+  match the real endpoints 1:1, so the SPA runs with no backend. Read-only
+  views use `get()`; the chat tab uses `post()` (the only write-direction call).
 - **Components** — [`src/components/`](../../frontend-prod/src/components/):
   `KpiCard`, `Charts`, `States` (Loading/Error/Empty), `useAsync` (fetch hook),
   `format.js` (usd/pct/num/signClass), `perf.js` (`realizedFromTrades`).
@@ -27,6 +28,7 @@ Source: [`frontend-prod/`](../../frontend-prod/).
 | [Daily](../../frontend-prod/src/views/Daily.jsx) | `getSnapshots()` | none — renders the backend's per-run snapshots (date/time split from `timestamp`, holdings from `positions`). `market_value` is already live-marked at snapshot time, so no per-symbol re-quote. Newest-first. |
 | [Agent Log](../../frontend-prod/src/views/AgentLog.jsx) | `getAgentLog(30)` | master/detail timeline + selected memo; per-level token split. Expects runs **newest-first** (as the backend serves them). |
 | [Performance](../../frontend-prod/src/views/Performance.jsx) | `getPortfolio`, `getTrades` + `getPrice` per symbol | win rate + realized P&L from the trade ledger (`realizedFromTrades`); unrealized from live prices. |
+| [Chat](../../frontend-prod/src/views/Chat.jsx) ("Ask AI") | `postChat(messages)` | Multi-turn chat backed by `POST /api/chat`. Maintains full conversation history in component state and sends it with every request. In stub mode returns a static message — no API call is made. |
 
 > **Why the frontend re-marks prices:** the backend's stored `market_value` is
 > the *last-trade* value, not live (see the data contract). Positions and
