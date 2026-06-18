@@ -4,31 +4,37 @@ import { postChat } from "../api.js";
 export default function Chat() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [loadingLabel, setLoadingLabel] = useState("Thinking…");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [agentLoading, setAgentLoading] = useState(false);
   const [error, setError] = useState(null);
   const bottomRef = useRef(null);
 
+  const anyLoading = chatLoading || agentLoading;
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
+  }, [messages, anyLoading]);
 
   async function submit(triggerAgent) {
     const text = input.trim();
-    if (!text || loading) return;
-    const next = [...messages, { role: "user", content: text }];
+    if (!text) return;
+    if (triggerAgent ? agentLoading : chatLoading) return;
+
+    const userMsg = { role: "user", content: text };
+    const next = [...messages, userMsg];
     setMessages(next);
     setInput("");
-    setLoading(true);
-    setLoadingLabel(triggerAgent ? "Running agent — this takes ~30s…" : "Thinking…");
     setError(null);
+
+    const setThisLoading = triggerAgent ? setAgentLoading : setChatLoading;
+    setThisLoading(true);
     try {
       const { answer } = await postChat(next, triggerAgent);
-      setMessages([...next, { role: "assistant", content: answer }]);
+      setMessages(prev => [...prev, { role: "assistant", content: answer }]);
     } catch (e) {
       setError(e.message);
     } finally {
-      setLoading(false);
+      setThisLoading(false);
     }
   }
 
@@ -52,10 +58,16 @@ export default function Chat() {
             <div className="chat-text">{m.content}</div>
           </div>
         ))}
-        {loading && (
+        {chatLoading && (
           <div className="chat-bubble assistant">
             <div className="chat-role">AI</div>
-            <div className="chat-text chat-thinking">{loadingLabel}</div>
+            <div className="chat-text chat-thinking">Thinking…</div>
+          </div>
+        )}
+        {agentLoading && (
+          <div className="chat-bubble assistant">
+            <div className="chat-role">AI</div>
+            <div className="chat-text chat-thinking">Running agent — this takes ~30s…</div>
           </div>
         )}
         {error && <div className="chat-error">{error}</div>}
@@ -70,13 +82,13 @@ export default function Chat() {
           onKeyDown={onKey}
           placeholder="Ask about the portfolio… or write a trading directive to run the agent"
           rows={2}
-          disabled={loading}
+          disabled={chatLoading}
         />
         <div className="chat-buttons">
-          <button className="chat-send" onClick={() => submit(false)} disabled={loading || !hasInput}>
+          <button className="chat-send" onClick={() => submit(false)} disabled={chatLoading || !hasInput}>
             Send
           </button>
-          <button className="chat-run" onClick={() => submit(true)} disabled={loading || !hasInput}>
+          <button className="chat-run" onClick={() => submit(true)} disabled={anyLoading || !hasInput}>
             Run Agent
           </button>
         </div>
