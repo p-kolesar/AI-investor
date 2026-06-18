@@ -1,6 +1,6 @@
 # Backend
 
-Status: **current** · Last verified: 2026-06-10
+Status: **current** · Last verified: 2026-06-18
 
 Python v2 Azure Function App (Flex Consumption). Source: [`backend/`](../../backend/).
 The HTTP endpoint table lives in the root [README](../../README.md#backend-endpoints);
@@ -93,6 +93,31 @@ soft guidance, not invariants.
 `get_earnings` — all `{symbol}` → structured dict via `FinnhubClient`. Level 1
 needs no tools because the loop pre-fetches quote + recommendation itself.
 Trades are deliberately **not** a tool (see the deterministic-execution ADR).
+
+## Chat endpoint (`POST /api/chat`)
+
+A conversational Q&A endpoint backed by Claude. Not part of the agent loop —
+it is a separate, stateless call triggered by the frontend "Ask AI" tab.
+
+**Flow:**
+1. Reads `portfolio.parquet`, `cash_ledger.parquet`, and the 5 most recent rows
+   of `agent_log.parquet` from blob storage (read-only — no writes).
+2. Builds a system prompt containing the current positions, cash, those memos,
+   and the trading mandate rules.
+3. Calls `claude-sonnet-4-6` with the user's full conversation history as the
+   `messages` array (multi-turn; the frontend sends all prior turns each time).
+4. Returns `{ "answer": "..." }`.
+
+**Auth:** uses `CLAUDE_API_KEY` (same env var as the agent loop). First-run
+gotcha: the Anthropic client defaults to `ANTHROPIC_API_KEY` — must be
+overridden explicitly: `anthropic.Anthropic(api_key=os.getenv("CLAUDE_API_KEY"))`.
+
+**Cost:** ~$0.05–0.13 per 5-question session at `claude-sonnet-4-6` pricing
+($3/M input, $15/M output). No token cap or spend guard — chat is read-only
+and low-volume; the existing agent spend cap does not apply.
+
+**Stub mode:** in the frontend, `postChat()` returns a static "connect your
+backend" string when `VITE_API_BASE` is unset, so no backend call is made.
 
 ## Data written
 
