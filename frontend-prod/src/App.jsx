@@ -6,6 +6,7 @@ import AgentLog from "./views/AgentLog.jsx";
 import Performance from "./views/Performance.jsx";
 import Daily from "./views/Daily.jsx";
 import Blotter from "./views/Blotter.jsx";
+import Chat from "./views/Chat.jsx";
 
 // Tab registry. frontend-beta drops the "Performance" entry from this list.
 const TABS = [
@@ -15,6 +16,7 @@ const TABS = [
   { id: "agent-log", label: "Agent Log", Component: AgentLog },
   { id: "performance", label: "Performance", Component: Performance },
   { id: "blotter", label: "Blotter", Component: Blotter },
+  { id: "chat", label: "Ask AI", Component: Chat },
 ];
 
 export default function App() {

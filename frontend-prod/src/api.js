@@ -14,6 +14,16 @@ async function get(path) {
   return res.json();
 }
 
+async function post(path, body) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`${path} -> ${res.status} ${res.statusText}`);
+  return res.json();
+}
+
 // ---- Portfolio: { positions:[{symbol,shares,avg_cost,market_value}], cash, total_value }
 export async function getPortfolio() {
   return USE_STUBS ? stub.portfolio() : get("/portfolio");
@@ -53,6 +63,14 @@ export async function getHistory() {
   if (USE_STUBS) return { series: stub.history(), isStub: true };
   // Real endpoint does not exist yet — fall back to mock, flagged as stub.
   return { series: stub.history(), isStub: true };
+}
+
+// ---- Chat: { answer: string }
+// messages: [{role:"user"|"assistant", content:string}] — full conversation so far,
+// including the new user message as the last entry.
+export async function postChat(messages) {
+  if (USE_STUBS) return { answer: "Chat requires a live backend. Set VITE_API_BASE to connect." };
+  return post("/chat", { messages });
 }
 
 export const usingStubs = USE_STUBS;
