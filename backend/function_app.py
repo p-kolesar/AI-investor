@@ -2,6 +2,7 @@ import json
 import logging
 from datetime import datetime
 
+import anthropic
 import polars as pl
 import azure.functions as func
 
@@ -318,6 +319,66 @@ def daily_agent_timer(timer: func.TimerRequest) -> None:
         logging.exception("Daily agent run failed")
         raise
 
+
+
+# ---- Chat ----
+
+
+@app.route(route="chat", methods=["POST"])
+def chat(req: func.HttpRequest) -> func.HttpResponse:
+    """Answer questions about portfolio, trades, and agent memos using Claude."""
+    try:
+        body = req.get_json()
+        messages = body.get("messages") or []
+        if not messages:
+            return func.HttpResponse(json.dumps({"error": "messages required"}), status_code=400, mimetype="application/json")
+
+        portfolio = read_parquet(CONTAINER, "portfolio.parquet")
+        cash_ledger = read_parquet(CONTAINER, "cash_ledger.parquet")
+        cash = cash_ledger.row(-1, named=True)["amount"] if len(cash_ledger) > 0 else 0
+        agent_log = read_parquet(CONTAINER, "agent_log.parquet")
+        recent_memos = agent_log.tail(5).reverse().to_dicts() if len(agent_log) > 0 else []
+
+        positions_text = "\n".join(
+            f"  {p['symbol']}: {p['shares']} shares @ avg ${p['avg_cost']:.2f}, market value ${p['market_value']:.2f}"
+            for p in portfolio.to_dicts()
+        ) or "  (no positions)"
+
+        memos_text = "\n\n".join(
+            f"  {m['run_date']}: {m['memo']}"
+            for m in recent_memos
+        ) or "  (no agent runs yet)"
+
+        system = f"""You are an AI assistant for an autonomous paper-trading portfolio. Answer questions about the portfolio's positions, past trades, the agent's investment memos, and the trading strategy. Be concise and factual.
+
+CURRENT PORTFOLIO
+Cash: ${cash:,.2f}
+Positions:
+{positions_text}
+
+RECENT AGENT MEMOS (newest first)
+{memos_text}
+
+TRADING MANDATE
+- Target 5-10 positions; no single name may exceed 15% of portfolio value
+- Minimum 10% cash floor at all times
+- Entries and exits driven by the agent's daily screening and deep-dive analysis"""
+
+        client = anthropic.Anthropic()
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1024,
+            system=system,
+            messages=[{"role": m["role"], "content": m["content"]} for m in messages],
+        )
+        return func.HttpResponse(
+            json.dumps({"answer": response.content[0].text}),
+            mimetype="application/json",
+            status_code=200,
+        )
+    except Exception as e:
+        logging.error(f"Chat failed: {e}")
+        return func.HttpResponse(json.dumps({"error": str(e)}), status_code=500, mimetype="application/json")
 
 
 # ---- Health ----
