@@ -91,6 +91,7 @@ table { width: 100%; border-collapse: collapse; }
 th, td { text-align: right; padding: 10px 12px; border-bottom: 1px solid var(--border); }
 th:first-child, td:first-child { text-align: left; }
 th { color: var(--text-dim); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; }
+tbody tr:nth-child(even) { background: var(--bg-elev); }
 tbody tr:hover { background: var(--bg-elev-2); }
 td.pos { color: var(--pos); }
 td.neg { color: var(--neg); }
