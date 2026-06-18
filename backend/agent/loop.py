@@ -313,8 +313,11 @@ def snapshot_portfolio() -> dict:
     return _write_snapshot(FinnhubClient())
 
 
-def run_agent() -> dict:
-    """Execute one daily agent run. Returns a summary dict."""
+def run_agent(user_directive: str | None = None) -> dict:
+    """Execute one daily agent run. Returns a summary dict.
+
+    user_directive: optional free-text instruction from the user (injected into
+    both screening and deep-dive prompts for this run only)."""
     log = read_parquet(CONTAINER, "agent_log.parquet")
 
     # Cumulative spend cap — disables the agent entirely.
@@ -337,8 +340,11 @@ def run_agent() -> dict:
     # candidates it flagged for future entry.
     prior_memo = log.row(-1, named=True)["memo"] if len(log) > 0 else ""
     rows = _prefetch_screen_data(fc, watchlist)
+    screen_prompt = screening_user_prompt(rows, positions, prior_memo)
+    if user_directive:
+        screen_prompt = f"USER DIRECTIVE FOR THIS RUN:\n{user_directive}\n\n{screen_prompt}"
     screen_text, l1_in, l1_out = _complete(
-        client, MANDATE, screening_user_prompt(rows, positions, prior_memo), SCREENING_MAX_TOKENS
+        client, MANDATE, screen_prompt, SCREENING_MAX_TOKENS
     )
     screen = _extract_json(screen_text) or {}
     selected = [s.upper() for s in screen.get("selected", []) if s.upper() in watchlist]
@@ -363,8 +369,11 @@ def run_agent() -> dict:
     # feedback (portfolio vs SPY, per-position P&L) is injected so every memo can
     # open with its alpha — the primary success metric.
     performance = _compute_performance(fc)
+    dive_prompt = deepdive_user_prompt(selected, positions, cash, performance)
+    if user_directive:
+        dive_prompt = f"USER DIRECTIVE FOR THIS RUN:\n{user_directive}\n\n{dive_prompt}"
     dive_text, l2_in, l2_out = _converse(
-        client, fc, MANDATE, deepdive_user_prompt(selected, positions, cash, performance),
+        client, fc, MANDATE, dive_prompt,
         DEEPDIVE_TOOLS, DEEPDIVE_MAX_TOKENS,
     )
     decision = _extract_json(dive_text) or {}
@@ -393,4 +402,5 @@ def run_agent() -> dict:
         "watchlist_changed": wl_changed,
         "watchlist_size": len(new_wl),
         "tokens": l1_in + l1_out + l2_in + l2_out,
+        "memo": memo,
     }

@@ -68,9 +68,10 @@ export async function getHistory() {
 // ---- Chat: { answer: string }
 // messages: [{role:"user"|"assistant", content:string}] — full conversation so far,
 // including the new user message as the last entry.
-export async function postChat(messages) {
+// triggerAgent=true: skips Q&A, runs the agent with the last message as a directive.
+export async function postChat(messages, triggerAgent = false) {
   if (USE_STUBS) return { answer: "Chat requires a live backend. Set VITE_API_BASE to connect." };
-  return post("/chat", { messages });
+  return post("/chat", { messages, trigger_agent: triggerAgent });
 }
 
 export const usingStubs = USE_STUBS;

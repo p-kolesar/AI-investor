@@ -162,18 +162,20 @@ tr.cash-row td { color: var(--accent); }
   outline: none;
 }
 .chat-input:focus { border-color: var(--accent); }
-.chat-send {
-  background: var(--accent);
+.chat-buttons { display: flex; flex-direction: column; gap: 6px; }
+.chat-send, .chat-run {
   border: none;
   border-radius: var(--radius);
-  color: #0d1117;
   font: inherit;
   font-weight: 600;
   padding: 0 20px;
+  height: 38px;
   cursor: pointer;
   white-space: nowrap;
 }
-.chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
+.chat-send { background: var(--accent); color: #0d1117; }
+.chat-run  { background: var(--warn);   color: #0d1117; }
+.chat-send:disabled, .chat-run:disabled { opacity: 0.4; cursor: not-allowed; }
 
 @media (max-width: 820px) {
   .kpi-row { grid-template-columns: repeat(2, 1fr); }

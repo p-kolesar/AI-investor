@@ -5,6 +5,7 @@ export default function Chat() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingLabel, setLoadingLabel] = useState("Thinking…");
   const [error, setError] = useState(null);
   const bottomRef = useRef(null);
 
@@ -12,16 +13,17 @@ export default function Chat() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  async function send() {
+  async function submit(triggerAgent) {
     const text = input.trim();
     if (!text || loading) return;
     const next = [...messages, { role: "user", content: text }];
     setMessages(next);
     setInput("");
     setLoading(true);
+    setLoadingLabel(triggerAgent ? "Running agent — this takes ~30s…" : "Thinking…");
     setError(null);
     try {
-      const { answer } = await postChat(next);
+      const { answer } = await postChat(next, triggerAgent);
       setMessages([...next, { role: "assistant", content: answer }]);
     } catch (e) {
       setError(e.message);
@@ -31,15 +33,17 @@ export default function Chat() {
   }
 
   function onKey(e) {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(false); }
   }
+
+  const hasInput = input.trim().length > 0;
 
   return (
     <div className="chat-wrap">
       <div className="chat-messages">
         {messages.length === 0 && (
           <div className="chat-empty">
-            Ask about positions, trades, memos, or strategy.
+            Ask about the portfolio, or write a trading directive and click <b>Run Agent</b>.
           </div>
         )}
         {messages.map((m, i) => (
@@ -51,7 +55,7 @@ export default function Chat() {
         {loading && (
           <div className="chat-bubble assistant">
             <div className="chat-role">AI</div>
-            <div className="chat-text chat-thinking">Thinking…</div>
+            <div className="chat-text chat-thinking">{loadingLabel}</div>
           </div>
         )}
         {error && <div className="chat-error">{error}</div>}
@@ -64,13 +68,18 @@ export default function Chat() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKey}
-          placeholder="Ask about the portfolio… (Enter to send, Shift+Enter for newline)"
+          placeholder="Ask about the portfolio… or write a trading directive to run the agent"
           rows={2}
           disabled={loading}
         />
-        <button className="chat-send" onClick={send} disabled={loading || !input.trim()}>
-          Send
-        </button>
+        <div className="chat-buttons">
+          <button className="chat-send" onClick={() => submit(false)} disabled={loading || !hasInput}>
+            Send
+          </button>
+          <button className="chat-run" onClick={() => submit(true)} disabled={loading || !hasInput}>
+            Run Agent
+          </button>
+        </div>
       </div>
     </div>
   );
