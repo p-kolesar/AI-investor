@@ -17,6 +17,48 @@ app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
 CONTAINER = "papertrading"
 INITIAL_CASH = 100_000
+CHAT_TRIGGER_COOLDOWN = 600  # seconds — one agent trigger per 10 minutes
+
+
+def _check_and_set_rate_limit() -> tuple[bool, str]:
+    """Returns (allowed, error_msg). Writes the current timestamp if allowed."""
+    try:
+        df = read_parquet(CONTAINER, "chat_trigger.parquet")
+        if len(df) > 0:
+            last = df.row(0, named=True)["triggered_at"]
+            elapsed = (datetime.now() - last).total_seconds()
+            if elapsed < CHAT_TRIGGER_COOLDOWN:
+                remaining = int(CHAT_TRIGGER_COOLDOWN - elapsed)
+                return False, f"Rate limited — wait {remaining // 60}m {remaining % 60}s before triggering again."
+    except Exception:
+        pass  # blob absent on first ever trigger
+    write_parquet(CONTAINER, "chat_trigger.parquet",
+                  pl.DataFrame({"triggered_at": [datetime.now()]}))
+    return True, ""
+
+
+def _format_agent_result(result: dict) -> str:
+    status = result.get("status")
+    if status == "disabled":
+        return f"Agent is disabled (cumulative spend cap reached): {result.get('reason')}"
+    if status == "blocked":
+        return f"Agent run blocked ({result.get('reason')}). {result.get('memo', '')}".strip()
+    # ok path
+    selected = result.get("selected", [])
+    executed = result.get("executed", [])
+    memo = result.get("memo", "")
+    if not selected:
+        return f"Agent ran but found no symbols to deep-dive.\n\n{memo}".strip()
+    lines = [f"Agent run complete. Analyzed: {', '.join(selected)}."]
+    if executed:
+        lines.append(f"{len(executed)} trade(s) executed:")
+        for t in executed:
+            lines.append(f"  {t['side']} {t['shares']} {t['symbol']} @ ${t.get('price', 0):.2f}")
+    else:
+        lines.append("No trades executed.")
+    if memo:
+        lines.append(f"\n{memo}")
+    return "\n".join(lines)
 
 # ---- Admin: Initialize portfolio ----
 
@@ -327,12 +369,35 @@ def daily_agent_timer(timer: func.TimerRequest) -> None:
 
 @app.route(route="chat", methods=["POST"])
 def chat(req: func.HttpRequest) -> func.HttpResponse:
-    """Answer questions about portfolio, trades, and agent memos using Claude."""
+    """Answer questions or trigger an agent run with a user directive.
+
+    Body: { messages, trigger_agent? }
+    When trigger_agent=true: rate-checks (10 min cooldown), runs the agent with
+    the last user message injected as a directive, returns the formatted result.
+    When trigger_agent=false (default): normal Q&A via Claude.
+    """
     try:
         body = req.get_json()
         messages = body.get("messages") or []
+        trigger_agent = bool(body.get("trigger_agent", False))
         if not messages:
             return func.HttpResponse(json.dumps({"error": "messages required"}), status_code=400, mimetype="application/json")
+
+        if trigger_agent:
+            allowed, err = _check_and_set_rate_limit()
+            if not allowed:
+                return func.HttpResponse(json.dumps({"answer": err}), mimetype="application/json", status_code=200)
+            directive = messages[-1]["content"]
+            try:
+                result = run_agent(user_directive=directive)
+            except Exception as e:
+                logging.error(f"Agent run via chat failed: {e}")
+                return func.HttpResponse(json.dumps({"error": str(e)}), status_code=500, mimetype="application/json")
+            return func.HttpResponse(
+                json.dumps({"answer": _format_agent_result(result), "agent_result": result}, default=str),
+                mimetype="application/json",
+                status_code=200,
+            )
 
         portfolio = read_parquet(CONTAINER, "portfolio.parquet")
         cash_ledger = read_parquet(CONTAINER, "cash_ledger.parquet")
