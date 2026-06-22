@@ -26,6 +26,14 @@ param pythonVersion string = '3.13'
 @secure()
 param claudeApiKey string = ''
 
+@description('Telegram Bot token (from BotFather). Required for the guest chatbot.')
+@secure()
+param telegramBotToken string = ''
+
+@description('Google Places API key. Required for nearby places lookups.')
+@secure()
+param googlePlacesApiKey string = ''
+
 // ---- Derived names ----------------------------------------------------------
 var uniqueSuffix = uniqueString(resourceGroup().id)
 var storageAccountName = take(toLower('st${baseName}${environmentName}${uniqueSuffix}'), 24)
@@ -47,7 +55,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   kind: 'StorageV2'
   properties: {
     minimumTlsVersion: 'TLS1_2'
-    allowBlobPublicAccess: false
+    allowBlobPublicAccess: true
     supportsHttpsTrafficOnly: true
   }
 }
@@ -65,8 +73,29 @@ resource deploymentContainer 'Microsoft.Storage/storageAccounts/blobServices/con
   }
 }
 
-// Add project data containers here as you build (declare them so infra owns
-// them rather than relying on runtime create_container()).
+resource propertiesContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobService
+  name: 'properties'
+  properties: { publicAccess: 'None' }
+}
+
+resource logosContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobService
+  name: 'logos'
+  properties: { publicAccess: 'Blob' }
+}
+
+resource sessionsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobService
+  name: 'sessions'
+  properties: { publicAccess: 'None' }
+}
+
+resource placesCacheContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobService
+  name: 'places-cache'
+  properties: { publicAccess: 'None' }
+}
 
 var storageConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storageAccount.listKeys().keys[0].value}'
 
@@ -154,6 +183,22 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         {
           name: 'CLAUDE_API_KEY'
           value: claudeApiKey
+        }
+        {
+          name: 'TELEGRAM_BOT_TOKEN'
+          value: telegramBotToken
+        }
+        {
+          name: 'GOOGLE_PLACES_API_KEY'
+          value: googlePlacesApiKey
+        }
+        {
+          name: 'STORAGE_CONNECTION_STRING'
+          value: storageConnectionString
+        }
+        {
+          name: 'STORAGE_ACCOUNT_NAME'
+          value: storageAccountName
         }
       ]
       // The Static Web App calls this API cross-origin (build-time

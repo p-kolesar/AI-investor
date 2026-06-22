@@ -1,27 +1,48 @@
-// Single seam between the UI and the backend. Every view should call functions
-// defined here and nothing else, so swapping stub data for the live API is a
-// one-file change. When VITE_API_BASE is unset the app runs on stub data so it
-// works with no backend; set VITE_API_BASE=/api (or the Function App URL) to
-// hit the real API. See backend/function_app.py for the served routes.
+// Single seam between the UI and the backend. All backend calls go through here.
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
-const USE_STUBS = !API_BASE;
 
 async function get(path) {
   const res = await fetch(`${API_BASE}${path}`);
-  if (!res.ok) throw new Error(`${path} -> ${res.status} ${res.statusText}`);
+  if (!res.ok) throw new Error(`${path} → ${res.status} ${res.statusText}`);
   return res.json();
 }
 
-// ---- Health: { status: "ok" }
+async function post(path, body, headers = {}) {
+  const res = await fetch(`${API_BASE}${path}`, { method: "POST", body, headers });
+  if (!res.ok) throw new Error(`${path} → ${res.status} ${res.statusText}`);
+  return res.json();
+}
+
+// ---- Health ----
 export async function getHealth() {
-  return USE_STUBS ? { status: "stub" } : get("/health");
+  return get("/health");
 }
 
-// ---- Hello: { message: "Hello, World!" }
-export async function getHello(name) {
-  const q = name ? `?name=${encodeURIComponent(name)}` : "";
-  return USE_STUBS ? { message: "Hello, World! (stub)" } : get(`/hello${q}`);
+// ---- Property (guest read) ----
+export async function getProperty(id) {
+  return get(`/property/${id}`);
 }
 
-export const usingStubs = USE_STUBS;
+export async function getPlaces(id) {
+  return get(`/property/${id}/places`);
+}
+
+// ---- Admin: save property ----
+export async function saveProperty(params) {
+  const qs = new URLSearchParams(
+    Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== ""))
+  ).toString();
+  return get(`/admin/property?${qs}`);
+}
+
+// ---- Admin: upload logo ----
+export async function uploadLogo(id, adminToken, file) {
+  return post(
+    `/admin/upload/${id}?adminToken=${encodeURIComponent(adminToken)}`,
+    file,
+    { "Content-Type": file.type },
+  );
+}
+
+export const usingStubs = !API_BASE;
