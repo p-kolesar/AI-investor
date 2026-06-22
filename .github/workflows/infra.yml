@@ -43,11 +43,10 @@ jobs:
         uses: azure/cli@v2
         env:
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
         with:
           inlineScript: |
-            # baseName: use the AZURE_BASE_NAME variable if set, else fall back to
-            # the parameters.json default ('myapp'). claudeApiKey is optional — the
-            # bare shell deploys without it; set the secret once you add an agent.
             outputs=$(az deployment group create \
               --resource-group "$AZURE_RESOURCE_GROUP" \
               --name "infra-$GITHUB_RUN_NUMBER" \
@@ -55,6 +54,8 @@ jobs:
               --parameters infra/main.parameters.json \
               --parameters baseName="${AZURE_BASE_NAME:-myapp}" \
               --parameters claudeApiKey="$CLAUDE_API_KEY" \
+              --parameters telegramBotToken="$TELEGRAM_BOT_TOKEN" \
+              --parameters googlePlacesApiKey="$GOOGLE_PLACES_API_KEY" \
               --query properties.outputs -o json)
 
             funcName=$(echo "$outputs" | jq -r '.functionAppName.value')

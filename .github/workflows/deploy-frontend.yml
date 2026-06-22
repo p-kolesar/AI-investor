@@ -63,6 +63,7 @@ jobs:
         working-directory: ${{ env.APP_DIR }}
         env:
           VITE_API_BASE: https://${{ steps.discover.outputs.func_host }}/api
+          VITE_TELEGRAM_BOT_USERNAME: ${{ vars.TELEGRAM_BOT_USERNAME }}
         run: |
           npm ci
           npm run build
