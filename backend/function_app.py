@@ -81,7 +81,7 @@ def get_logo(req: func.HttpRequest) -> func.HttpResponse:
 
 # ---- Admin: create / update property ----
 
-@app.route(route="admin-property", methods=["GET"])
+@app.route(route="manage-property", methods=["GET"])
 def admin_property(req: func.HttpRequest) -> func.HttpResponse:
     logger.info("admin-property called: id=%s", req.params.get("id", "<new>"))
     p = req.params
@@ -129,7 +129,7 @@ def admin_property(req: func.HttpRequest) -> func.HttpResponse:
 
 # ---- Admin: logo upload ----
 
-@app.route(route="admin-upload/{id}", methods=["POST"])
+@app.route(route="manage-upload/{id}", methods=["POST"])
 def admin_upload(req: func.HttpRequest) -> func.HttpResponse:
     logger.info("admin-upload called: id=%s", req.route_params.get("id"))
     property_id = req.route_params["id"]

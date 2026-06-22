@@ -33,7 +33,7 @@ export async function saveProperty(params) {
   const qs = new URLSearchParams(
     Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== ""))
   ).toString();
-  return get(`/admin-property?${qs}`);
+  return get(`/manage-property?${qs}`);
 }
 
 // ---- Logo URL (served via Function App, not blob storage) ----
@@ -44,7 +44,7 @@ export function logoUrl(id) {
 // ---- Admin: upload logo ----
 export async function uploadLogo(id, adminToken, file) {
   return post(
-    `/admin-upload/${id}?adminToken=${encodeURIComponent(adminToken)}`,
+    `/manage-upload/${id}?adminToken=${encodeURIComponent(adminToken)}`,
     file,
     { "Content-Type": file.type },
   );

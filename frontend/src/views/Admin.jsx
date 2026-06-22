@@ -32,7 +32,7 @@ function PicksEditor({ picks, onChange }) {
 }
 
 export default function Admin() {
-  const { id: routeId } = useParams();
+  const { id: routeId } = useParams(); // from /manage/:id
 
   const [form, setForm] = useState({
     id: routeId ?? "",

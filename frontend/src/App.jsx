@@ -6,9 +6,9 @@ export default function App() {
   return (
     <Routes>
       <Route path="/p/:id" element={<GuestPage />} />
-      <Route path="/admin/:id" element={<Admin />} />
-      <Route path="/admin" element={<Admin />} />
-      <Route path="*" element={<Navigate to="/admin" replace />} />
+      <Route path="/manage/:id" element={<Admin />} />
+      <Route path="/manage" element={<Admin />} />
+      <Route path="*" element={<Navigate to="/manage" replace />} />
     </Routes>
   );
 }
