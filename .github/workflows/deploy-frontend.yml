@@ -1,11 +1,11 @@
-name: Deploy Frontend (prod)
+name: Deploy Frontend
 
 on:
   push:
     branches: [main]
     paths:
-      - "frontend-prod/**"
-      - ".github/workflows/deploy-frontend-prod.yml"
+      - "frontend/**"
+      - ".github/workflows/deploy-frontend.yml"
   workflow_dispatch:
 
 permissions:
@@ -13,7 +13,7 @@ permissions:
 
 env:
   AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
-  APP_DIR: frontend-prod
+  APP_DIR: frontend
 
 jobs:
   deploy:
@@ -27,9 +27,9 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Discover the Function App host (for VITE_API_BASE) and the prod Static
-      # Web App + its deployment token — all from the resource group, so no
-      # extra GitHub secrets are needed beyond AZURE_CREDENTIALS.
+      # Discover the Function App host (for VITE_API_BASE) and the Static Web
+      # App + its deployment token — all from the resource group, so no extra
+      # GitHub secrets are needed beyond AZURE_CREDENTIALS.
       - name: Discover backend host + SWA token
         id: discover
         uses: azure/cli@v2
@@ -40,9 +40,9 @@ jobs:
               --query "[0].defaultHostName" -o tsv)
             swaName=$(az staticwebapp list \
               --resource-group "$AZURE_RESOURCE_GROUP" \
-              --query "[?contains(name, '-prod-')].name | [0]" -o tsv)
+              --query "[0].name" -o tsv)
             if [ -z "$funcHost" ] || [ -z "$swaName" ]; then
-              echo "::error::Function App or prod Static Web App not found in $AZURE_RESOURCE_GROUP. Run the Infra workflow first."
+              echo "::error::Function App or Static Web App not found in $AZURE_RESOURCE_GROUP. Run the Infra workflow first."
               exit 1
             fi
             token=$(az staticwebapp secrets list \
