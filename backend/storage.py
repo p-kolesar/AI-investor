@@ -21,6 +21,13 @@ def blob_write(container: str, blob: str, data) -> None:
     _client(container, blob).upload_blob(json.dumps(data), overwrite=True)
 
 
+def blob_read_bytes(container: str, blob: str):
+    try:
+        return _client(container, blob).download_blob().readall()
+    except Exception:
+        return None
+
+
 def blob_write_bytes(container: str, blob: str, data: bytes, content_type: str = "application/octet-stream") -> None:
     _client(container, blob).upload_blob(
         data,

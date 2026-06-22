@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getProperty, getPlaces } from "../api.js";
+import { getProperty, getPlaces, logoUrl } from "../api.js";
 
 const TYPE_LABEL = {
   parking: "Parking",
@@ -81,7 +81,7 @@ export default function GuestPage() {
   return (
     <div className="app guest-page">
       <header className="guest-header">
-        {prop.branding?.logoUrl && <img src={prop.branding.logoUrl} alt="logo" className="property-logo" />}
+        {prop.branding?.hasLogo && <img src={logoUrl(id)} alt="logo" className="property-logo" />}
         <h1>{prop.name}</h1>
       </header>
 

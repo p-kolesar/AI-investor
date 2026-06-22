@@ -55,7 +55,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   kind: 'StorageV2'
   properties: {
     minimumTlsVersion: 'TLS1_2'
-    allowBlobPublicAccess: true
+    allowBlobPublicAccess: false
     supportsHttpsTrafficOnly: true
   }
 }
@@ -82,7 +82,7 @@ resource propertiesContainer 'Microsoft.Storage/storageAccounts/blobServices/con
 resource logosContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
   parent: blobService
   name: 'logos'
-  properties: { publicAccess: 'Blob' }
+  properties: { publicAccess: 'None' }
 }
 
 resource sessionsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
@@ -195,10 +195,6 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         {
           name: 'STORAGE_CONNECTION_STRING'
           value: storageConnectionString
-        }
-        {
-          name: 'STORAGE_ACCOUNT_NAME'
-          value: storageAccountName
         }
       ]
       // The Static Web App calls this API cross-origin (build-time

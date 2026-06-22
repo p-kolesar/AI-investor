@@ -1,17 +1,14 @@
 import hashlib
 import json
-import os
 import uuid
 
 import azure.functions as func
 
 from bot import handle_update
 from places import get_places
-from storage import blob_read, blob_write, blob_write_bytes
+from storage import blob_read, blob_write, blob_write_bytes, blob_read_bytes
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
-
-_STORAGE_ACCOUNT = os.environ.get("STORAGE_ACCOUNT_NAME", "")
 
 
 def _hash(token: str) -> str:
@@ -65,6 +62,18 @@ def get_property_places(req: func.HttpRequest) -> func.HttpResponse:
         return _ok(get_places(loc["lat"], loc["lng"], prop["id"]))
     except Exception as e:
         return _err(str(e), 500)
+
+
+# ---- Logo (public read, served via Function App) ----
+
+@app.route(route="logos/{id}", methods=["GET"])
+def get_logo(req: func.HttpRequest) -> func.HttpResponse:
+    property_id = req.route_params["id"]
+    for ext, mime in [("png", "image/png"), ("jpg", "image/jpeg")]:
+        data = blob_read_bytes("logos", f"{property_id}.{ext}")
+        if data is not None:
+            return func.HttpResponse(data, mimetype=mime, status_code=200)
+    return _err("Logo not found", 404)
 
 
 # ---- Admin: create / update property ----
@@ -128,13 +137,12 @@ def admin_upload(req: func.HttpRequest) -> func.HttpResponse:
 
     content_type = req.headers.get("Content-Type", "image/png")
     ext = "jpg" if "jpeg" in content_type else "png"
-    blob_name = f"{property_id}.{ext}"
-    blob_write_bytes("logos", blob_name, req.get_body(), content_type)
+    blob_write_bytes("logos", f"{property_id}.{ext}", req.get_body(), content_type)
 
-    logo_url = f"https://{_STORAGE_ACCOUNT}.blob.core.windows.net/logos/{blob_name}"
-    prop.setdefault("branding", {})["logoUrl"] = logo_url
+    # Logo is served via /api/logos/{id} — no public blob URL needed
+    prop.setdefault("branding", {})["hasLogo"] = True
     blob_write("properties", f"{property_id}.json", prop)
-    return _ok({"logoUrl": logo_url})
+    return _ok({"logoPath": f"/logos/{property_id}"})
 
 
 # ---- Telegram webhook ----
