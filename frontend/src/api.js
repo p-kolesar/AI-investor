@@ -36,6 +36,11 @@ export async function saveProperty(params) {
   return get(`/admin/property?${qs}`);
 }
 
+// ---- Logo URL (served via Function App, not blob storage) ----
+export function logoUrl(id) {
+  return `${API_BASE}/logos/${id}`;
+}
+
 // ---- Admin: upload logo ----
 export async function uploadLogo(id, adminToken, file) {
   return post(
