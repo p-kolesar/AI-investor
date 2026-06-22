@@ -1,8 +1,11 @@
 import hashlib
 import json
+import logging
 import uuid
 
 import azure.functions as func
+
+logger = logging.getLogger(__name__)
 
 from bot import handle_update
 from places import get_places
@@ -78,8 +81,9 @@ def get_logo(req: func.HttpRequest) -> func.HttpResponse:
 
 # ---- Admin: create / update property ----
 
-@app.route(route="admin/property", methods=["GET"])
+@app.route(route="admin-property", methods=["GET"])
 def admin_property(req: func.HttpRequest) -> func.HttpResponse:
+    logger.info("admin-property called: id=%s", req.params.get("id", "<new>"))
     p = req.params
     property_id = p.get("id")
     admin_token = p.get("adminToken", "")
@@ -125,8 +129,9 @@ def admin_property(req: func.HttpRequest) -> func.HttpResponse:
 
 # ---- Admin: logo upload ----
 
-@app.route(route="admin/upload/{id}", methods=["POST"])
+@app.route(route="admin-upload/{id}", methods=["POST"])
 def admin_upload(req: func.HttpRequest) -> func.HttpResponse:
+    logger.info("admin-upload called: id=%s", req.route_params.get("id"))
     property_id = req.route_params["id"]
     admin_token = req.params.get("adminToken", "")
     prop = blob_read("properties", f"{property_id}.json")
