@@ -1,8 +1,3 @@
-# Azure Functions + AI/data stack
 azure-functions
 azure-storage-blob
-polars
-pyarrow
-requests
 anthropic
-

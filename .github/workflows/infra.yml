@@ -42,24 +42,25 @@ jobs:
       - name: Deploy Bicep
         uses: azure/cli@v2
         env:
-          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
         with:
           inlineScript: |
-            : "${FINNHUB_API_KEY:?FINNHUB_API_KEY secret is empty — add it under repo Settings → Secrets and variables → Actions}"
-            : "${CLAUDE_API_KEY:?CLAUDE_API_KEY secret is empty — add it under repo Settings → Secrets and variables → Actions}"
             outputs=$(az deployment group create \
               --resource-group "$AZURE_RESOURCE_GROUP" \
               --name "infra-$GITHUB_RUN_NUMBER" \
               --template-file infra/main.bicep \
               --parameters infra/main.parameters.json \
-              --parameters baseName="$AZURE_BASE_NAME" \
-              --parameters finnhubApiKey="$FINNHUB_API_KEY" claudeApiKey="$CLAUDE_API_KEY" \
+              --parameters baseName="${AZURE_BASE_NAME:-myapp}" \
+              --parameters claudeApiKey="$CLAUDE_API_KEY" \
+              --parameters telegramBotToken="$TELEGRAM_BOT_TOKEN" \
+              --parameters googlePlacesApiKey="$GOOGLE_PLACES_API_KEY" \
               --query properties.outputs -o json)
 
             funcName=$(echo "$outputs" | jq -r '.functionAppName.value')
             host=$(echo "$outputs" | jq -r '.functionAppDefaultHostname.value')
-            swaProdHost=$(echo "$outputs" | jq -r '.staticWebAppProdHostname.value')
+            swaHost=$(echo "$outputs" | jq -r '.staticWebAppHostname.value')
 
             {
               echo "## Infra deployed"
@@ -69,5 +70,5 @@ jobs:
               echo "| Resource group | \`$AZURE_RESOURCE_GROUP\` |"
               echo "| Function App | \`$funcName\` |"
               echo "| Hostname | https://$host |"
-              echo "| Frontend (prod) | https://$swaProdHost |"
+              echo "| Frontend | https://$swaHost |"
             } >> "$GITHUB_STEP_SUMMARY"

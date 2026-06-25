@@ -1,21 +1,21 @@
-# AI Portfolio Manager
+# App Shell
 
-An autonomous, paper-trading portfolio manager built as a live GenAI demo. A
-Claude agent runs every weekday, scans a watchlist, decides trades, and writes
-an investment memo — all backed by a Python Azure Function App, with a React
-dashboard on Azure Static Web Apps. See [AI Portfolio Manager Spec.md](AI%20Portfolio%20Manager%20Spec.md)
-for the full design (Slovak).
+A clean-slate, deployable starting point for building agentic software on
+Azure quickly. It ships as a working skeleton — a Python Azure Function App, a
+React/Vite SPA, Bicep infrastructure, and GitHub Actions CI/CD — with all
+business logic stripped out. **Starting a new project? Begin with the
+[Start here checklist](Project%20Charter.md#0-start-here--initialize-this-shell-for-your-project)
+in the Project Charter** — branch, name your app, point it at a resource group,
+then fill in the rest and build.
 
-## Stack
+## What's in the box
 
 | Layer | Technology |
 | --- | --- |
-| Backend | Python Flex Consumption Function App |
-| AI agent | Claude API — `claude-sonnet-4-6` |
-| Market data | Finnhub (rate-limited + 15-min cache) |
-| Storage | Polars + Parquet in Azure Blob Storage |
+| Backend | Python Flex Consumption Function App (`/hello`, `/health`) |
 | Frontend | React + Vite SPA → Azure Static Web Apps (Free) |
-| IaC / CI | Bicep + GitHub Actions |
+| IaC / CI | Bicep + GitHub Actions (infra / backend / frontend deploy) |
+| AI agent | `CLAUDE_API_KEY` is pre-wired into the Function App — add the `anthropic` package and your own loop |
 
 ## Layout
 
@@ -23,24 +23,18 @@ for the full design (Slovak).
 .github/workflows/
   infra.yml                 # provisions/updates Azure infra (infra/** + manual)
   deploy.yml                # deploys the Python function code (backend/** + manual)
-  deploy-frontend-prod.yml  # builds + deploys frontend-prod to its Static Web App
+  deploy-frontend.yml       # builds + deploys frontend to its Static Web App
 infra/
   main.bicep                # Storage, Log Analytics + App Insights, Flex Consumption
-                            # Function App (+ CORS), Free Static Web App (prod)
+                            # Function App (+ CORS), Free Static Web App
   main.parameters.json      # baseName / environmentName / pythonVersion
 backend/
-  function_app.py           # Python v2 HTTP endpoints (see below) + daily timer trigger
-  agent/                    # loop.py (2-level agent), tools.py, prompts.py
-  market/finnhub.py         # Finnhub wrapper: rate limit, daily cap, 15-min cache
-  storage/blobs.py          # Parquet <-> Azure Blob helpers
-  trading.py                # paper-trade validation + position/cash reconciliation
+  function_app.py           # Python v2 HTTP endpoints (see below)
   host.json, requirements.txt, .funcignore
   local.settings.json.example
-frontend-prod/              # React + Vite dashboard (dark mode), 4 tabs
-  src/App.jsx               # tab shell
+frontend/                   # React + Vite SPA (dark theme)
+  src/App.jsx               # bare shell view (calls /hello)
   src/api.js                # single backend seam (+ stub data when no API configured)
-  src/views/                # Dashboard, Positions, AgentLog, Performance
-  src/components/           # KpiCard, Charts, States, hooks, formatters
   vite.config.js, staticwebapp.config.json, .env.example
 docs/                       # documentation: data layer, architecture, guides, ADRs — see docs/README.md
 tests/                      # offline unit tests for key backend modules — see tests/README.md
@@ -56,17 +50,8 @@ All routes are served under `/api`.
 
 | Endpoint | Method | Description |
 | --- | --- | --- |
-| `/setup` | GET | Initialize Parquet files, $100K cash, seed watchlist |
-| `/portfolio` | GET | Current positions + cash + total value |
-| `/trade` | POST | Record a BUY/SELL and reconcile positions + cash |
-| `/trades` | GET | Trade ledger (append-only) |
-| `/snapshots` | GET | Daily portfolio+cash snapshots (live-marked). `?limit=N` |
-| `/snapshot` | GET | Snapshot the **current** portfolio on demand (live-marked; no agent run, no Claude/trades) |
-| `/agent/run` | POST | Trigger one agent run (screening → deep dive → trades + memo) |
-| `/agent/log` | GET | Recent runs (memo, tokens, cost) + cumulative spend. `?limit=N` |
-| `/watchlist` | GET | Current agent-managed watchlist |
-| `/prices/{symbol}` | GET | Live quote via 15-min cache |
-| `/health` | GET | Liveness probe |
+| `/hello` | GET | Hello-world trigger (`?name=` optional) |
+| `/health` | GET | Liveness probe (used by the deploy smoke test) |
 
 ## One-time setup
 
@@ -78,7 +63,7 @@ infra job can create the resource group) and save the JSON as the
 
 ```bash
 az ad sp create-for-rbac \
-  --name "gh-aiinvestor" \
+  --name "gh-myapp" \
   --role Contributor \
   --scopes /subscriptions/<SUBSCRIPTION_ID> \
   --sdk-auth
@@ -90,9 +75,8 @@ az ad sp create-for-rbac \
 
 | Secret | Used by |
 | --- | --- |
-| `AZURE_CREDENTIALS` | all Azure workflows (login) |
-| `FINNHUB_API_KEY` | infra (injected into the Function App) |
-| `CLAUDE_API_KEY` | infra (injected into the Function App) |
+| `AZURE_CREDENTIALS` | all Azure workflows (login) — **required** |
+| `CLAUDE_API_KEY` | infra (injected into the Function App) — **optional**; the bare shell deploys without it, set it once you add a Claude agent |
 
 ### 3. Repository variables
 
@@ -100,36 +84,28 @@ az ad sp create-for-rbac \
 
 | Variable | Value |
 | --- | --- |
-| `AZURE_RESOURCE_GROUP` | `rg-aiinvestor-dev` |
-| `AZURE_LOCATION` | `westeurope` *(must be a Static Web Apps region)* |
-| `AZURE_BASE_NAME` | `aiinvestor` |
+| `AZURE_RESOURCE_GROUP` | e.g. `rg-myapp-dev` |
+| `AZURE_LOCATION` | e.g. `westeurope` *(must be a Static Web Apps region)* |
+| `AZURE_BASE_NAME` | e.g. `myapp` *(also set `baseName` in `infra/main.parameters.json`)* |
 
 ## Deployment order
 
 1. **Infra (Bicep)** — Actions → *Infra (Bicep)* → Run. Creates the resource
-   group, Function App, and the prod Static Web App; sets CORS so the SWA can
+   group, Function App, and the Static Web App; sets CORS so the SWA can
    call the API. The run summary prints the Function App + frontend hostnames.
 2. **Deploy (Function code)** — discovers the Function App in the resource group,
    deploys `backend/`, and smoke-tests `GET /api/health`.
-3. **Initialize state** — call `GET /api/setup` once to create the Parquet files,
-   $100K cash, and seed watchlist.
-4. **Deploy Frontend (prod)** — builds `frontend-prod` with `VITE_API_BASE`
+3. **Deploy Frontend** — builds `frontend` with `VITE_API_BASE`
    pointed at the live API and uploads to the Static Web App. (Fetches the SWA
    deploy token at run time — no extra secrets.)
 
-After the first run, pushes to `main` trigger each pipeline by changed path
-(`infra/**`, `backend/**`, `frontend-prod/**`). The **daily agent run is an Azure
-Functions timer trigger** (`daily_agent_timer` in `backend/function_app.py`) that
-fires at 07:55 (in the app's `WEBSITE_TIME_ZONE`; set it to a CET zone, else UTC),
-Mon–Fri. Failures surface in Function App / Application Insights logs; cost
-guardrails (spend/token cap) are recorded in the run result and the agent log.
-
-## Cost guardrails
-
-- **Claude:** per-call max tokens (screening 1024 / deep dive 4096), daily token
-  cap (20K, runaway guard), cumulative spend cap ($10 → agent disables itself).
-- **Finnhub:** ~42 calls/min throttle, 200 calls/day hard cap, 15-min quote cache.
-- **Azure:** Flex Consumption; set a cost alert/budget on the subscription.
+Run these **in order the first time** (use *Run workflow* / `workflow_dispatch`).
+On an initial push to `main` all three fire in parallel by changed path, so the
+backend and frontend jobs will fail until Infra has created the resources — they
+exit with a clear "Run the Infra workflow first" message. Run Infra, wait for it
+to finish, then run the other two (or just re-run them). After that, pushes to
+`main` trigger each pipeline by changed path (`infra/**`, `backend/**`,
+`frontend/**`).
 
 ## Local development
 
@@ -142,17 +118,18 @@ pip install -r requirements.txt
 cp local.settings.json.example local.settings.json   # then fill in your keys
 func start    # requires Azure Functions Core Tools v4
 # GET http://localhost:7071/api/health  ->  {"status": "ok"}
+# GET http://localhost:7071/api/hello   ->  {"message": "Hello, World!"}
 ```
 
-> The `local.settings.json.example` is a template — put real keys only in the
+> `local.settings.json.example` is a template — put real keys only in the
 > gitignored `local.settings.json`, never in the example.
 
 ### Frontend
 
 ```bash
-cd frontend-prod
+cd frontend
 npm install
-npm run dev          # runs on stub/demo data with no backend
+npm run dev          # runs on stub data with no backend
 ```
 
 To point the dev server at a real backend, set in `.env`:
@@ -164,25 +141,16 @@ VITE_API_BASE=https://<func-host>/api
 VITE_API_PROXY=http://localhost:7071
 ```
 
-## Status
+## Building on the shell
 
-| Component | State |
-| --- | --- |
-| Backend (agent, endpoints, storage) | ✅ done |
-| Infra (Function App + prod SWA + CORS) | ✅ done |
-| `frontend-prod` (4-tab dashboard) | ✅ done & deployed |
-| Daily agent (Functions timer trigger) | ✅ operational |
-| `frontend-beta` (workshop bug-hunt copy) | ⏳ planned |
-| Dashboard charts on real data | ⏳ uses demo series until a `/history` endpoint exists |
-
-> **Charts note:** the Dashboard portfolio-vs-SPY line and daily-P&L bar charts
-> run on demo data (the backend has no daily time-series endpoint yet). Only
-> `frontend-prod/src/api.js` `getHistory()` changes when that lands — the UI does
-> not. Sharpe ratio / max drawdown on the Performance tab are stubbed for the
-> same reason.
+1. Copy [Project Charter.md](Project%20Charter.md) and fill in the `FILL IN`
+   sections — purpose, use cases, data model, agent design.
+2. Add backend routes in `backend/function_app.py`; add dependencies to
+   `backend/requirements.txt`.
+3. Add new Azure resources (data containers, etc.) in `infra/main.bicep`.
+4. Build out `frontend/` — keep all backend calls behind `src/api.js`.
 
 ## Notes
 
 - **Auth:** the frontend is a public URL with no authentication (by design).
-- **Cold start:** Flex Consumption has a brief cold start — fine for a demo.
-- **Init:** always call `GET /api/setup` before the first agent run.
+- **Cold start:** Flex Consumption has a brief cold start.
